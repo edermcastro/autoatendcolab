@@ -1,6 +1,7 @@
 const operatorSelect = document.getElementById('operator-select');
 const selectButton = document.getElementById('select-button');
 const errorMessage = document.getElementById('error-message');
+const quitButton = document.getElementById('sair-button');
 
 // Carrega a lista de operadores ao iniciar
 window.addEventListener('DOMContentLoaded', async () => {
@@ -78,4 +79,10 @@ window.electronAPI.onOperatorResponse((response) => {
         selectButton.textContent = 'Continuar';
     }
     // Se for bem-sucedido, o processo principal fechará esta janela
+});
+
+
+
+quitButton.addEventListener('click',()=>{
+    window.electronAPI.quitApp();
 });

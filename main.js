@@ -317,8 +317,6 @@ ipcMain.on('chamar-fila', async () => {
 
     if (mainWin) {
         if (!mainWin.isVisible()) {
-            const data = readData();
-            mainWin.webContents.send('load-data', data); // Envia dados ao mostrar
             mainWin.show();
             mainWin.focus();
         } else {
@@ -327,38 +325,62 @@ ipcMain.on('chamar-fila', async () => {
     } else {
         createMainWindow(); // Cria se não existir
         mainWin.webContents.on('did-finish-load', () => {
-             const data = readData();
-             mainWin.webContents.send('load-data', data);
              mainWin.show();
              mainWin.focus();
         });
     }
 
-    try{
-        //chama-fila-app-colab/{colabId}
-        const colabId = await getSelectedOperatorId();
-        const token = await getAuthToken('token');
-        const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
-        const request = net.request({
-            method: 'GET',
-            url: url,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
+    const colabId = await getSelectedOperatorId();
+    const token = await getAuthToken('token');
+    const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
+
+    const request = net.request({
+        method: 'GET',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    request.on('response', (response) => {
+        let rawData = '';
+
+        response.on('data', (chunk) => {
+            rawData += chunk;
         });
 
-        request.on('response', (response) => {
-            if (response.statusCode === 200) {
-                mainWin.webContents.send('select-atend-id', response.data.id);
-                // window.electronAPI.selectAtendID(response.data.id);
-                console.log(response.data);
+        response.on('end', () => {
+            try {
+                const parsedData = JSON.parse(rawData);
+
+                if (response.statusCode === 200) {
+                    mainWin.webContents.send('select-atend-id', parsedData.data);
+                    console.log(parsedData);
+                } else {
+                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
+                    // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
+                    mainWin.webContents.send('api-error', {
+                        message: `Erro ao iniciar atendimento: ${parsedData.message || 'Erro desconhecido'}`
+                    });
+                }
+            } catch (error) {
+                console.error("Erro ao analisar a resposta JSON:", error);
+                mainWin.webContents.send('api-error', {
+                       message: `Erro ao processar resposta do servidor.`
+                });
             }
         });
+    });
 
-    } catch(error){
-        console.log(error);
-    }
+    request.on('error', (error) => {
+        console.error("Erro na requisição:", error);
+        mainWin.webContents.send('api-error', {
+            message: `Erro ao iniciar atendimento: ${error.message}`
+        });
+    });
+
+    request.end();
 
 });
 
@@ -441,8 +463,20 @@ ipcMain.on('drag-float-window', (event, { offsetX, offsetY }) => {
 });
 */
 
-ipcMain.on('sair', ()=>{
-    app.exit();
+
+ipcMain.on('logout', ()=>{
+    mainWin.webContents.executeJavaScript(`
+            localStorage.removeItem("idOperator");
+            localStorage.removeItem("selectedOperator");
+            localStorage.removeItem("salaOperator");
+            localStorage.removeItem("servicosOperator");
+        `).then(() => {
+        // Fecha a janela main e abre a janela de operador e inicia o aplicativo
+        mainWin.hide();
+        floatingWin.hide();
+        createOperatorWindow();
+        app.isReady();
+    });
 });
 
 // Handler para login
@@ -651,4 +685,9 @@ ipcMain.on('token-exists', async () => {
         createFloatingWindow();
         createMainWindow();
     }
+});
+
+
+ipcMain.on('sair', ()=>{
+    app.exit();
 });
