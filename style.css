@@ -1,0 +1,179 @@
+/* Estilos Gerais */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: transparent; /* Para janela flutuante */
+    overflow: hidden; /* Evita barras de rolagem indesejadas na flutuante */
+    -webkit-app-region: drag;
+}
+
+/* Janela Flutuante */
+#float-button {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    /* Cor padrão (azul) quando não há itens */
+    background-color: rgba(0, 122, 255, 0.6);
+    border: transparent;
+    color: white;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: inset 0 4px 8px rgba(2, 2, 2, 0.8);
+    transition: background-color 0.3s ease; /* Suaviza a transição de cor */
+    position: absolute;
+    top: -6px;
+    left: 4px;
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+}
+/* Nova classe para quando houver itens */
+#float-button.has-items {
+    background-color: rgba(255, 69, 0, 0.7); /* Tom avermelhado/alaranjado com transparência */
+    box-shadow: inset 0 4px 8px rgba(139, 0, 0, 0.9); /* Sombra mais escura avermelhada */
+}
+
+#float-button:hover {
+     /* Ajusta o hover para ambas as cores base */
+    filter: brightness(1.2); /* Clareia um pouco no hover */
+}
+
+/* Remove a cor de hover específica anterior se existir */
+/* #float-button:hover {
+    background-color: rgba(0, 100, 210, 0.9);
+} */
+
+
+#float-button #icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+/* Para permitir arrastar a janela pelo body (se o botão não ocupar tudo) */
+/* body { -webkit-app-region: drag; } */
+
+
+/* Janela Principal */
+#list-view, #observation-view {
+    padding: 20px;
+    background-color: white; /* Fundo branco para a janela principal */
+    height: 100vh; /* Ocupa a altura da viewport */
+    box-sizing: border-box;
+}
+
+#item-list {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 15px;
+    max-height: 400px; /* Altura máxima para a lista */
+    overflow-y: auto; /* Barra de rolagem se necessário */
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+#item-list li {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+#item-list li:last-child {
+    border-bottom: none;
+}
+
+#item-list li.selected {
+    background-color: #e0e0e0;
+    font-weight: bold;
+}
+
+button {
+    padding: 10px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 10px;
+    -webkit-app-region: no-drag;
+    background: transparent;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+textarea {
+    width: 95%; /* Ajuste conforme necessário */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+
+/* Estilos para a página de login */
+.login-page, .operator-page {
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container, .operator-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+#login-button, #select-button {
+    background-color: #0077cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+}
+
+#login-button:hover, #select-button:hover {
+    background-color: #005fa3;
+}
+
+#login-button:disabled, #select-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
