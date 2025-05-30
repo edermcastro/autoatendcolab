@@ -305,8 +305,16 @@ async function getSelectedOperatorId() {
     });
 }
 
+
+// Ouvir pedido para obter contagem (ex: se o JSON for atualizado)
+ipcMain.handle('get-count', async () => {
+    const data = readData();
+    return data.length;
+});
+
 // Ouvir pedido para mostrar a janela principal
-ipcMain.on('show-main-window', async () => {
+ipcMain.on('chamar-fila', async () => {
+
     if (mainWin) {
         if (!mainWin.isVisible()) {
             const data = readData();
@@ -325,25 +333,54 @@ ipcMain.on('show-main-window', async () => {
              mainWin.focus();
         });
     }
+
+    try{
+        //chama-fila-app-colab/{colabId}
+        const colabId = await getSelectedOperatorId();
+        const token = await getAuthToken('token');
+        const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
+        const request = net.request({
+            method: 'GET',
+            url: url,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        request.on('response', (response) => {
+            if (response.statusCode === 200) {
+                mainWin.webContents.send('select-atend-id', response.data.id);
+                // window.electronAPI.selectAtendID(response.data.id);
+                console.log(response.data);
+            }
+        });
+
+    } catch(error){
+        console.log(error);
+    }
+
 });
 
-// Ouvir pedido para obter contagem (ex: se o JSON for atualizado)
-ipcMain.handle('get-count', async () => {
-    const data = readData();
-    return data.length;
+ipcMain.on('select-atend-id',(itemId)=>{
+    selectedItemId = itemId;
+    console.log(selectedItemId);
 });
 
-// Ouvir clique no botão "Próximo"
-ipcMain.on('next-step', (event, itemId) => {
-    console.log('Botão Próximo clicado para o item ID:', itemId); // Log para depuração
-    const url = 'https://httpbin.org/post'; // URL de exemplo para enviar a solicitação
+// Ouvir clique no botão "Iniciar atendimento"
+ipcMain.on('iniciar-atendimento', (event, itemId) => {
+
+    //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
+
+    const url = apiUrl + 'iniciar-atendimento/'+itemId; // URL de exemplo para enviar a solicitação
 
     // Simula o envio de uma solicitação POST com o ID do item
     const request = net.request({
-        method: 'POST',
+        method: 'GET',
         url: url,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
         }
     });
 
@@ -374,20 +411,18 @@ ipcMain.on('next-step', (event, itemId) => {
 
 // Ouvir clique no botão "Salvar"
 ipcMain.on('save-observation', (event, { itemId, observation }) => {
+
+    //TODO salva a observação e finaliza o atendimento
+
     console.log(`Salvando observação para item ${itemId}: ${observation}`);
-    // Aqui você implementaria a lógica para salvar a observação.
-    // Poderia ser:
-    // 1. Atualizar o arquivo data.json (cuidado com concorrência se houver muita escrita)
-    // 2. Salvar em outro arquivo
-    // 3. Enviar para outra API/banco de dados
-    // Exemplo simples (apenas log):
+
     console.log("Observação 'salva' (apenas log por enquanto).");
 
     // Opcional: Ler dados novamente e atualizar contagem na janela flutuante
-    const data = readData();
-    if (floatingWin) {
-        floatingWin.webContents.send('update-count', data.length);
-    }
+    // const data = readData();
+    // if (floatingWin) {
+    //     floatingWin.webContents.send('update-count', data.length);
+    // }
 
     // Opcional: Fechar ou resetar a janela principal após salvar
     if (mainWin) {

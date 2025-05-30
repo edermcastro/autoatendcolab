@@ -90,8 +90,7 @@ function showObservationView() {
 // // Evento do botão "Iniciar atendimento"
 nextButton.addEventListener('click', () => {
     if (selectedItemId !== null) {
-        console.log("Botão Próximo clicado, enviando ID:", selectedItemId);
-        window.electronAPI.sendNextStep(selectedItemId); // Envia o ID para o main process
+        window.electronAPI.iniciaAtendimento(selectedItemId);
         showObservationView(); // Muda para a tela de observação
     } else {
         console.warn("Nenhum item selecionado para 'Próximo'");

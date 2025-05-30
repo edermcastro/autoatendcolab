@@ -2,7 +2,8 @@ const { app, contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     onLoadData: (callback) => ipcRenderer.on('load-data', (_event, value) => callback(value)),
-    sendNextStep: (itemId) => ipcRenderer.send('next-step', itemId),
+    selectAtendID: (callback) => ipcRenderer.on('select-atend-id', (_event, value) => callback(value)),
+    iniciaAtendimento: (itemId) => ipcRenderer.send('iniciar-atendimento', itemId),
     quitApp : () => ipcRenderer.send('sair'),
     saveObservation: (data) => ipcRenderer.send('save-observation', data), // data = { itemId, observation }
 
