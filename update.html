@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+    <title>Update</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="js/jquery/jquery.js"></script>
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <h1>Atualização de <span id="version"></span> para <span id="newversion"></span></h1>
+        <div id="message" class="message"></div>
+        <div id="percent">0%</div>
+    </div>
+    
+    <script src="update_renderer.js"></script>
+</body>
+</html>

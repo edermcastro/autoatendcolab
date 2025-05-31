@@ -2,18 +2,23 @@ const { app, BrowserWindow, ipcMain, screen, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-const { autoUpdater } = require('electron-updater');
+const { autoUpdater, AppUpdater } = require('electron-updater');
 const pjson = require(path.join(__dirname,'','package.json'));
 
 let floatingWin;
 let mainWin;
 let loginWin;
 let operatorWin;
+let updateWin;
+
 const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (backup local)
 const apiUrl = 'https://autoatend.linco.work/api/v1/';
 
-const updUrl = 'https://autoatend.linco.work/public/aa_upd/';
-autoUpdater.setFeedURL(updUrl);
+
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+// autoUpdater.autoDownloadOnStartup = true;
+
 
 if(!pjson.isBuildNow){
     require('electron-reload')(__dirname,{
@@ -127,6 +132,29 @@ function createOperatorWindow() {
     });
 }
 
+function createUpdateWindow() {
+    updateWin = new BrowserWindow({
+        width: 600,
+        height: 300,
+        show: false, // Inicia oculta
+        frame: true,
+        autoHideMenuBar: true, // Oculta a barra de menus
+        menuBarVisible: false, // Garante que a barra de menus começa 
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: true,
+        },
+    });
+
+    updateWin.loadFile('update.html');
+    
+    updateWin.on('closed', () => {
+        updateWin = null;
+    });
+}
+
+
 function createFloatingWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
@@ -207,24 +235,26 @@ function createMainWindow() {
     });
 }
 
-function verifyUpdates(){
+
+if(pjson.isBuildNow){
+    autoUpdater.on('update-available', () => {
+        let pth = autoUpdater.downloadUpdate();
+        updateWin.show(); updateWin.focus();
+        updateWin.webContents.send('update_message',`Uma nova versão está dispinível.`);
+    })
     autoUpdater.on('download-progress',(obj) => {
-        mainWin.webContents.send('update_version',`Estamos baixando uma nova atualização: ${obj.percent.toFixed(2)}%`);
+        updateWin.webContents.send('update_message',`Estamos baixando uma nova atualização.`);
     });
     autoUpdater.on('update-downloaded',(obj) => {
-        mainWin.webContents.send('update_version',`Atualização concluída: ${obj.percent.toFixed(2)}%`);
+        updateWin.webContents.send('update_message',`Atualização concluída. Aguarde!`);
         setTimeout(()=>{
             autoUpdater.quitAndInstall();
         },5000);
     });
-    autoUpdater.on('update-available', () => {
-        mainWin.webContents.send('update_version',`Uma nova versão está dispinível.`);
-    })
     autoUpdater.on('error',err => {
-        mainWin.webContents.send('error',err);
+        updateWin.webContents.send('update_message',err);
     });
 }
-verifyUpdates();
 
 
 
@@ -239,7 +269,7 @@ app.whenReady().then(async () => {
         createLoginWindow();
     } else {
         // Se já estiver autenticado, verifica se tem operador selecionado
-        const operator = await getSelectedOperator();
+        // const operator = await getSelectedOperator();
 
         if (!operator || operator === 'null' || operator === null || operator === undefined || operator === '') {
             // Se não tiver operador selecionado, mostra a tela de seleção
@@ -249,8 +279,9 @@ app.whenReady().then(async () => {
             createFloatingWindow();
             createMainWindow();
         }
-
+        
     }
+    createUpdateWindow();
 
     app.on('activate', () => {
         // No macOS é comum recriar uma janela no aplicativo quando o
@@ -260,8 +291,14 @@ app.whenReady().then(async () => {
             // mas como temos a flutuante, talvez não precise.
             if (!floatingWin) createFloatingWindow();
             if (!mainWin) createMainWindow();
+            if (!updateWin) createUpdateWindow();
         }
     });
+
+    if(pjson.isBuildNow){
+        autoUpdater.checkForUpdates();
+    }
+
 });
 
 // Função para verificar se já existe um operador selecionado
@@ -304,6 +341,24 @@ async function getSelectedOperatorId() {
         }
     });
 }
+
+
+ipcMain.on('update_version', async (event, arg) => {
+    if(updateWin){
+        if(!updateWin.isVisible()){
+            updateWin.show();
+            updateWin.focus();
+        }else{
+            updateWin.focus();
+        }
+    } else {
+        createUpdateWindow();
+        updateWin.webContents.on('did-finish-load', () => {
+             updateWin.show();
+             updateWin.focus();
+        });
+    }
+});
 
 
 // Ouvir pedido para obter contagem (ex: se o JSON for atualizado)
@@ -566,6 +621,7 @@ ipcMain.on('select-operator', async (event, operator) => {
             operatorWin.close();
             createFloatingWindow();
             createMainWindow();
+            createUpdateWindow();
         });
     } catch (error) {
         event.reply('operator-response', { 
@@ -685,6 +741,8 @@ ipcMain.on('token-exists', async () => {
         createFloatingWindow();
         createMainWindow();
     }
+    //TODO sempre que já existir um token ele checa por novas atualizações
+    createUpdateWindow();
 });
 
 

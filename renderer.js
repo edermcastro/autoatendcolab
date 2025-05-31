@@ -22,7 +22,7 @@ let selectedItemName = '';
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data)=>{
     selectedItemId = data.id;
-    queueNumber.innerHTML = data ? 'Chamando: '+data.senhaGen + ' - '+ data.clientName.toUpperCase() + ' - ' + data.descricaoServico.toUpperCase() : 'Ninguem aguardando atendimento';
+    queueNumber.innerHTML = data ? 'Chamando: '+ /*data.senhaGen + ' - '+*/ data.clientName.toUpperCase() + ' - ' + data.descricaoServico.toUpperCase() : 'Ninguem aguardando atendimento';
 });
 
 // Função para popular a lista de itens
@@ -46,7 +46,7 @@ function populateList() {
         selectedItemId = itemToProcess.id;
         selectedItemName = itemToProcess.clientName;
         const li = document.createElement('li');
-        li.textContent = `${itemToProcess.senhaGen}: ${itemToProcess.clientName.toUpperCase()} - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
+        li.textContent = /*${itemToProcess.senhaGen}: */ `${itemToProcess.clientName.toUpperCase()} - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
         li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
