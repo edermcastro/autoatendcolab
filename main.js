@@ -90,6 +90,7 @@ function createLoginWindow() {
     loginWin = new BrowserWindow({
         width: 500,
         height: 500,
+        icon: "icon.ico",
         frame: true,
         autoHideMenuBar: true,
         
@@ -114,6 +115,7 @@ function createOperatorWindow() {
     operatorWin = new BrowserWindow({
         width: 1200,//500
         height: 600,
+        icon: "icon.ico",
         frame: true,
         autoHideMenuBar: true,
         webPreferences: {
@@ -136,6 +138,7 @@ function createUpdateWindow() {
     updateWin = new BrowserWindow({
         width: 600,
         height: 300,
+        icon: "icon.ico",
         show: false, // Inicia oculta
         frame: true,
         autoHideMenuBar: true, // Oculta a barra de menus
@@ -164,6 +167,7 @@ function createFloatingWindow() {
     floatingWin = new BrowserWindow({
         width: winWidth,
         height: winHeight,
+        icon: "icon.ico",
         x: screenWidth - winWidth + 0,
         y: screenHeight - winHeight - 60,
         frame: false,
@@ -203,6 +207,7 @@ function createMainWindow() {
     mainWin = new BrowserWindow({
         width: 1024,
         height: 600,
+        icon: "icon.ico",
         show: false, // Inicia oculta
         frame: true, // Sem bordas, título, etc.
         autoHideMenuBar: true, // Oculta a barra de menus
@@ -241,12 +246,13 @@ if(pjson.isBuildNow){
         let pth = autoUpdater.downloadUpdate();
         updateWin.show(); updateWin.focus();
         updateWin.webContents.send('update_message',`Uma nova versão está dispinível.`);
+        updateWin.webContents.send('update_percent',pth);
     })
     autoUpdater.on('download-progress',(obj) => {
         updateWin.webContents.send('update_message',`Estamos baixando uma nova atualização.`);
     });
     autoUpdater.on('update-downloaded',(obj) => {
-        updateWin.webContents.send('update_message',`Atualização concluída. Aguarde!`);
+        updateWin.webContents.send('update_message',`Download concluído. Aguarde, vamos reiniciar para instalar!`);
         setTimeout(()=>{
             autoUpdater.quitAndInstall();
         },5000);
@@ -416,7 +422,7 @@ ipcMain.on('chamar-fila', async () => {
                     console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
                     // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
                     mainWin.webContents.send('api-error', {
-                        message: `Erro ao iniciar atendimento: ${parsedData.message || 'Erro desconhecido'}`
+                        message: `Erro ao chamar atendimento: ${parsedData.message || 'Erro desconhecido'}`
                     });
                 }
             } catch (error) {
@@ -431,7 +437,7 @@ ipcMain.on('chamar-fila', async () => {
     request.on('error', (error) => {
         console.error("Erro na requisição:", error);
         mainWin.webContents.send('api-error', {
-            message: `Erro ao iniciar atendimento: ${error.message}`
+            message: `Erro ao chamar atendimento: ${error.message}`
         });
     });
 

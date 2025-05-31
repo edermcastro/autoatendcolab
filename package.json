@@ -2,7 +2,7 @@
   "name": "autoatendcolab",
   "version": "1.0.0",
   "main": "main.js",
-  "isBuildNow": true,
+  "isBuildNow": false,
   "scripts": {
     "start": "electron .",
     "nodemon": "nodemon --exec electron .",
@@ -25,7 +25,8 @@
     ],
     "win": {
       "asar": true,
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "icon.ico"
     },
     "nsis": {
       "deleteAppDataOnUninstall": true

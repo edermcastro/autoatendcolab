@@ -10,7 +10,7 @@ window.electronAPI.updMessage((data)=>{
 });
 
 window.electronAPI.updPercent((data)=>{
-    updpercent.innerHTML = data + '%';
+    updpercent.innerHTML = data;
 });
 
 window.electronAPI.atualVersion((data)=>{
