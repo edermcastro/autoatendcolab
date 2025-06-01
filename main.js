@@ -49,7 +49,11 @@ async function readData() {
 // Função para buscar dados da API
 async function fetchDataFromAPI() {
     //executa uma vez e a cada 30 segundos
-    getAndUpdateDataStorage(); setInterval(()=>{
+
+    //TODO propicio para fazer um webhook nessas funções que repetem a chamada  de requisições em busca de alterações
+    getAndUpdateDataStorage(); 
+    
+    const timer = setInterval(()=>{
         getAndUpdateDataStorage();
     },30000);
 }
@@ -235,7 +239,7 @@ function createFloatingWindow() {
         height: winHeight,
         icon: "icon.ico",
         x: screenWidth - winWidth + 0,
-        y: screenHeight - winHeight - 60,
+        y: screenHeight - winHeight - 180,
         frame: false,
         transparent: true,
         alwaysOnTop: true,
@@ -517,8 +521,10 @@ ipcMain.on('select-atend-id',(itemId)=>{
 });
 
 // Ouvir clique no botão "Iniciar atendimento"
-ipcMain.on('iniciar-atendimento', (event, itemId) => {
+ipcMain.on('iniciar-atendimento', async (event, itemId) => {
 
+    const token = await getAuthToken();
+    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
     //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
 
     const url = apiUrl + 'iniciar-atendimento/'+itemId; // URL de exemplo para enviar a solicitação
@@ -529,7 +535,7 @@ ipcMain.on('iniciar-atendimento', (event, itemId) => {
         url: url,
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('token')
+            'Authorization': 'Bearer ' + token
         }
     });
 
@@ -559,19 +565,53 @@ ipcMain.on('iniciar-atendimento', (event, itemId) => {
 });
 
 // Ouvir clique no botão "Salvar"
-ipcMain.on('save-observation', (event, { itemId, observation }) => {
+ipcMain.on('save-observation', async (event, { itemId, observation }) => {
 
     //TODO salva a observação e finaliza o atendimento
 
     console.log(`Salvando observação para item ${itemId}: ${observation}`);
 
-    console.log("Observação 'salva' (apenas log por enquanto).");
+    const token = await getAuthToken();
+    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
+    //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
 
-    // Opcional: Ler dados novamente e atualizar contagem na janela flutuante
-    // const data = readData();
-    // if (floatingWin) {
-    //     floatingWin.webContents.send('update-count', data.length);
-    // }
+    const url = apiUrl + 'finalizar-atendimento/'+itemId; // URL de exemplo para enviar a solicitação
+
+    const fmData = JSON.stringify({
+        "colabId": colabId,
+        "obsAtendimento": observation
+    });
+
+
+    // Simula o envio de uma solicitação POST com o ID do item
+    const request = net.request({
+        method: 'POST',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    request.on('response', (response) => {
+        response.on('data', (chunk) => {
+            console.log(`BODY: ${chunk}`);
+        });
+        response.on('end', () => {
+            console.log('Solicitação concluída.');
+            // Avisa a janela principal que a solicitação foi feita (opcional)
+            // mainWin.webContents.send('request-done', itemId);
+        });
+    });
+    request.on('error', (error) => {
+        console.error(`Erro na solicitação: ${error}`);
+        // Poderia notificar a UI sobre o erro
+    });
+
+    // Envia o ID como corpo da requisição (exemplo)
+    request.write(fmData);
+    request.end();
+
 
     // Opcional: Fechar ou resetar a janela principal após salvar
     if (mainWin) {

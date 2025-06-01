@@ -5,6 +5,7 @@ const itemList = document.getElementById('item-list');
 const nextButton = document.getElementById('next-button');
 const logoutButton = document.getElementById('logout-button');
 const observationText = document.getElementById('observation-text');
+const encObservationText = document.getElementById('enc-observation-text');
 const saveButton = document.getElementById('save-button');
 const selectedItemNameSpan = document.getElementById('selected-item-name');
 const queueNumber = document.getElementById('queue-number');
@@ -26,15 +27,19 @@ window.electronAPI.onLoadData((data) => {
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data)=>{
     if(!data){
-        queueNumber.innerHTML = 'Ninguem aguardando atendimento';
-        window.close();
+        queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
+        setTimeout(() => {
+            window.close();
+        },5000);
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela
     populateList(data);
     showListView();
     selectedItemId = data.id ?? null;
-    queueNumber.innerHTML = data ? 'NA VEZ: '+ /*data.senhaGen + ' - '+*/ data.clientName.toUpperCase() + ' - ' + data.descricaoServico.toUpperCase() : 'Ninguem aguardando atendimento';
+    //data.senhaGen
+    queueNumber.innerHTML = data ? `NA VEZ: <u style="color:orange;">${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
+    selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
 
 });
 
@@ -47,7 +52,7 @@ function populateList(currentData) {
     
     itemList.innerHTML = ''; // Limpa a lista anterior
     if (!proximos || proximos.length === 0 || !currentData) {
-        itemList.innerHTML = '<li>Nenhum item encontrado.</li>';
+        itemList.innerHTML = '<li>Fila vazia!</li>';
         nextButton.disabled = !currentData;
         return;
     }
@@ -59,13 +64,13 @@ function populateList(currentData) {
         selectedItemId = itemToProcess.id;
         selectedItemName = itemToProcess.clientName;
         const li = document.createElement('li');
-        li.textContent = /*${itemToProcess.senhaGen}: */ `${itemToProcess.clientName.toUpperCase()} - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
+        li.innerHTML = /*${itemToProcess.senhaGen}: */ `<u>${itemToProcess.clientName.toUpperCase()}</u> - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
         li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
         nextButton.disabled = false;
     } else {
-        itemList.innerHTML = '<li>Nenhum item para processar.</li>';
+        itemList.innerHTML = '<li>Fila vazia!</li>';
         nextButton.disabled = !currentData;
         selectedItemId = null;
         selectedItemName = '';
@@ -96,9 +101,6 @@ showListView();
 //inicia o atendimento
 function showObservationView() {
     if (!selectedItemId) return; // Não muda se nada estiver selecionado
-
-    //obter o id do atendimento de modo asyncrono
-    selectedItemNameSpan.textContent = selectedItemName || `ID ${selectedItemId}`; // Mostra nome ou ID
     listView.style.display = 'none';
     observationView.style.display = 'block';
 }
@@ -121,14 +123,14 @@ logoutButton.addEventListener('click',()=>{
 
 //
 // // Evento do botão "Salvar"
-// saveButton.addEventListener('click', () => {
-//     const observation = observationText.value.trim();
-//     if (selectedItemId !== null) {
-//         window.electronAPI.saveObservation({ itemId: selectedItemId, observation: observation });
-//         window.location.reload();
-//         // A janela será escondida pelo main process após salvar (conforme main.js)
-//         // Se quiser resetar a view sem esconder, chame showListView() aqui.
-//     }
-// });
+saveButton.addEventListener('click', () => {
+    const observation = observationText.value;
+    if (selectedItemId !== null) {
+        window.electronAPI.saveObservation({ itemId: selectedItemId, observation: observation });
+        window.location.reload();
+        // A janela será escondida pelo main process após salvar (conforme main.js)
+        // Se quiser resetar a view sem esconder, chame showListView() aqui.
+    }
+});
 
 // Inicialmente, mostra a view da lista (estará vazia até receber dados)
