@@ -1,11 +1,49 @@
+:root {
+    --primary-color: #001422; 
+    --secondary-color: rgba(11, 44, 80, 0.6);
+    --tertiary-color: rgba(8, 20, 61, 0.6);
+    --lightorange: #f3845c;
+    --accent-gold: #c0965c; /* Dourado suave */
+    --medium-gold: #c0965c30; /* Dourado suave2 */
+    --white: #fff;
+    --black: #000;
+    --light-gray: #f5f5f5;
+    --medium-gray: #e0e0e0;
+    --dark-gray: #5a5a5a;
+    --text-color: #303030;
+    --light-success-color: #39be70;
+    --success-color: #27ae60;
+    --dark-success-color: #1e8549;
+    --light-danger-color: #e97669;
+    --danger-color: #e74c3c;
+    --dark-danger-color: #a8372a;
+    --light-warning-color: #f5b857;
+    --warning-color: #f39c12;
+    --dark-warning-color: #e95f2b;
+    --opac-warning-color: rgba(156, 79, 40, 0.8);
+    --light-info-color: #62afe2;
+    --info-color: #2980b9;
+    --dark-info-color: #2980b954;
+
+    --border-radius: 6px;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    --box-shadow-inputs: 0 2px 10px rgba(0, 0, 0, 0.192);
+    --inset-box-shadow: inset 0 4px 8px rgba(2, 2, 2, 0.8);
+    --transition: all 0.3s ease;
+}
+
 /* Estilos Gerais */
 body {
     font-family: sans-serif;
+    color: #FFF;
     margin: 0;
     padding: 10px;
-    background-color: transparent; /* Para janela flutuante */
     overflow: hidden; /* Evita barras de rolagem indesejadas na flutuante */
     -webkit-app-region: drag;
+    background-color: #001422;
+}
+body#floating{
+    background-color: transparent !important;
 }
 
 /* Janela Flutuante */
@@ -14,16 +52,16 @@ body {
     height: 64px;
     border-radius: 50%;
     /* Cor padrão (azul) quando não há itens */
-    background-color: rgba(0, 122, 255, 0.6);
-    border: transparent;
-    color: white;
+    background-color: var(--dark-info-color);
+    border: 2px solid var(--dark-info-color);
+    color: var(--light-warning-color);
     font-size: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: inset 0 4px 8px rgba(2, 2, 2, 0.8);
+    box-shadow: var(--inset-box-shadow);
     transition: background-color 0.3s ease; /* Suaviza a transição de cor */
     position: absolute;
     top: -6px;
@@ -31,21 +69,18 @@ body {
     -webkit-app-region: no-drag;
     cursor: pointer;
 }
+
 /* Nova classe para quando houver itens */
 #float-button.has-items {
-    background-color: rgba(255, 69, 0, 0.7); /* Tom avermelhado/alaranjado com transparência */
-    box-shadow: inset 0 4px 8px rgba(139, 0, 0, 0.9); /* Sombra mais escura avermelhada */
+    background-color: var(--opac-warning-color); /* Tom avermelhado/alaranjado com transparência */
+    box-shadow: var(--inset-box-shadow); /* Sombra mais escura avermelhada */
+    border: 2px solid var(--dark-warning-color);
 }
 
 #float-button:hover {
      /* Ajusta o hover para ambas as cores base */
     filter: brightness(1.2); /* Clareia um pouco no hover */
 }
-
-/* Remove a cor de hover específica anterior se existir */
-/* #float-button:hover {
-    background-color: rgba(0, 100, 210, 0.9);
-} */
 
 
 #float-button #icon {
@@ -56,12 +91,21 @@ body {
 /* Para permitir arrastar a janela pelo body (se o botão não ocupar tudo) */
 /* body { -webkit-app-region: drag; } */
 
+#queue-number {
+    color: var(--info-color);
+}
+#queue-number u {
+    color: var(--light-info-color);
+}
+
 
 /* Janela Principal */
-#list-view, #observation-view {
+#list-view, #obs-view {
     padding: 20px;
-    background-color: white; /* Fundo branco para a janela principal */
-    height: 100vh; /* Ocupa a altura da viewport */
+    background-color: var(--secondary-color); /* Fundo branco para a janela principal */
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    height: 96vh; /* Ocupa a altura da viewport */
     box-sizing: border-box;
 }
 
@@ -71,13 +115,15 @@ body {
     margin-bottom: 15px;
     max-height: 400px; /* Altura máxima para a lista */
     overflow-y: auto; /* Barra de rolagem se necessário */
-    border: 1px solid #ccc;
+    border: 1px solid var(--tertiary-color);
+    border-radius: var(--border-radius);
+    background-color: var(--secondary-color);
     padding: 10px;
 }
 
 #item-list li {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--tertiary-color);
 }
 
 #item-list li:last-child {
@@ -85,7 +131,8 @@ body {
 }
 
 #item-list li.selected {
-    background-color: #e0e0e0;
+    background-color: var(--secondary-color);
+    color: var(--light-info-color);
     font-weight: bold;
 }
 
@@ -114,7 +161,6 @@ textarea {
 
 /* Estilos para a página de login */
 .login-page, .operator-page {
-    background-color: #f5f5f5;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -124,7 +170,7 @@ textarea {
 }
 
 .login-container, .operator-container {
-    background-color: white;
+    background-color: rgba(11, 44, 80, 0.6);
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -141,12 +187,27 @@ textarea {
     font-weight: bold;
 }
 
+.form-group input:focus-visible, .form-group select:focus-visible, textarea:focus-visible{
+    box-shadow: var(--box-shadow-inputs);
+    outline: none;
+}
 .form-group input, .form-group select {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ddd;
+    background-color: var(--secondary-color);
+    border: 1px solid var(--tertiary-color);
+    color: var(--medium-gray);
     border-radius: 4px;
     font-size: 16px;
+}
+
+textarea#observation-text{
+    width: calc(100% -20px) !important;
+    padding: 10px;
+    background-color: var(--secondary-color);
+    border: 1px solid var(--tertiary-color);
+    border-radius: 4px;
+    color: var(--medium-gray);
 }
 
 .error-message {
@@ -158,22 +219,59 @@ textarea {
     display: none;
 }
 
-#login-button, #select-button {
-    background-color: #0077cc;
+button{
     color: white;
     border: none;
     border-radius: 4px;
     padding: 12px 20px;
     font-size: 16px;
     cursor: pointer;
-    width: 100%;
+}
+
+#next-button{
+    background-color: var(--success-color);
+}
+
+#next-button:hover{
+    background-color: var(--light-success-color);
+}
+
+#logout-button{
+    background-color: var(--danger-color);
+}
+
+#logout-button:hover{
+    background-color: var(--dark-danger-color);
+}
+
+#login-button, #select-button {
+    background-color: var(--info-color);
+    width: 50%;
 }
 
 #login-button:hover, #select-button:hover {
-    background-color: #005fa3;
+    background-color: var(--light-info-color);
 }
 
 #login-button:disabled, #select-button:disabled {
-    background-color: #cccccc;
+    background-color: var(--dark-info-color);
     cursor: not-allowed;
+}
+
+
+#sair-button{
+    background-color: #eb574d;
+}
+
+#sair-button:hover{
+    background-color: #e93f2c;
+}
+
+
+#save-button{
+    background-color: var(--light-warning-color);
+}
+
+#save-button:hover{
+    background-color: var(--warning-color);
 }

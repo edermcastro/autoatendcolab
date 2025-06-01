@@ -20,11 +20,11 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 
 //// carrega o electron-reload, buga ao salvar o main.js por conta do fetchDataFromAPI
-// if(!pjson.isBuildNow){
-//     require('electron-reload')(__dirname,{
-//         electron: require(`${__dirname}/node_modules/electron`)
-//     })
-// }
+if(!pjson.isBuildNow){
+    require('electron-reload')(__dirname,{
+        electron: require(`${__dirname}/node_modules/electron`)
+    })
+}
 
 // Função modificada para buscar dados da API
 async function readData() {
@@ -291,9 +291,9 @@ function createMainWindow() {
 
     mainWin.loadFile('index.html');
 
-    if(!pjson.isBuildNow) {
-        mainWin.webContents.openDevTools(); // Descomente para depurar
-    }
+    // if(!pjson.isBuildNow) {
+    //     mainWin.webContents.openDevTools(); // Descomente para depurar
+    // }
 
     mainWin.webContents.send('current_version', pjson.version);
 

@@ -20,8 +20,7 @@ window.electronAPI.onLoadData((data) => {
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados
-    populateList(data[0]);
-    showListView();
+    populateList(data[0]); 
 });
 
 //chama o proximo da fila ao abrir a janela de atendimentos
@@ -38,7 +37,7 @@ window.electronAPI.selectAtendID((data)=>{
     showListView();
     selectedItemId = data.id ?? null;
     //data.senhaGen
-    queueNumber.innerHTML = data ? `NA VEZ: <u style="color:orange;">${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
+    queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
     selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
 
 });
