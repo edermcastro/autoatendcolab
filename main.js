@@ -17,14 +17,14 @@ const apiUrl = 'https://autoatend.linco.work/api/v1/';
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
-// autoUpdater.autoDownloadOnStartup = true;
 
 
-if(!pjson.isBuildNow){
-    require('electron-reload')(__dirname,{
-        electron: require(`${__dirname}/node_modules/electron`)
-    })
-}
+//// carrega o electron-reload, buga ao salvar o main.js por conta do fetchDataFromAPI
+// if(!pjson.isBuildNow){
+//     require('electron-reload')(__dirname,{
+//         electron: require(`${__dirname}/node_modules/electron`)
+//     })
+// }
 
 // Função modificada para buscar dados da API
 async function readData() {
@@ -39,25 +39,91 @@ async function readData() {
         }
         
         // Tenta buscar dados da API
-        return await fetchDataFromAPI(token,colabId); //não usada aqui vai ser disparada via jquery dentro do modulo
+        return await fetchDataFromAPI(); 
 
     } catch (error) {
         console.error("Erro ao buscar dados da API:", error);
-
-        // Fallback: tenta ler do arquivo local em caso de falha na API
-        try {
-            const rawData = fs.readFileSync(dataPath, 'utf-8');
-            return JSON.parse(rawData);
-        } catch (localError) {
-            console.error("Erro ao ler data.json local:", localError);
-            return []; // Retorna array vazio em caso de erro
-        }
     }
 }
 
 // Função para buscar dados da API
-async function fetchDataFromAPI(token,colabId) {
-    //refactorado
+async function fetchDataFromAPI() {
+    //executa uma vez e a cada 30 segundos
+    getAndUpdateDataStorage(); setInterval(()=>{
+        getAndUpdateDataStorage();
+    },30000);
+}
+
+// Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
+async function getAndUpdateDataStorage (){
+
+    const token = await getAuthToken();
+    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
+    
+    const url = apiUrl + 'get-proximos/'+colabId; // URL de exemplo para enviar a solicitação
+    
+    if (!token && !colabId) {
+        console.warn("Token or colabId not found in localStorage. API requests will not be made.");
+        return; // Stop the function if token or colabId is missing
+    }
+
+    const request = net.request({
+        method: 'GET',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    request.on('response', (response) => {
+        let rawData = '';
+
+        response.on('data', (chunk) => {
+            rawData += chunk;
+        });
+
+        response.on('end', () => {
+            try {
+                const parsedData = JSON.parse(rawData);
+                let proximos = parsedData;
+
+                if (response.statusCode === 200) {
+                    if(!mainWin.isVisible){
+                    //envia os dados para o loadData atualiza a tela somente se não estiver sendo exibida
+                        mainWin.webContents.send('load-data', proximos);
+                    }
+                    //grava os registros no localstorage
+                    floatingWin.webContents.executeJavaScript("localStorage.setItem('proximos','"+JSON.stringify(proximos)+"')");
+                    let count = proximos.length;
+                    //lista a contagem no botão flutuante
+                    floatingWin.webContents.send('update-count', count);
+                    console.log(`Dados carregados com sucesso!`);
+                } else {
+                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
+                    // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
+                    mainWin.webContents.send('api-error', {
+                        message: `Erro ao chamar atendimentos: ${parsedData.message || 'Erro desconhecido'}`
+                    });
+                }
+            } catch (error) {
+                console.error("Erro ao analisar a resposta JSON:", error);
+                mainWin.webContents.send('api-error', {
+                       message: `Erro ao processar resposta do servidor.`
+                });
+            }
+        });
+    });
+
+    request.on('error', (error) => {
+        console.error("Erro na requisição:", error);
+        mainWin.webContents.send('api-error', {
+            message: `Erro ao chamar atendimento: ${error.message}`
+        });
+    });
+
+    request.end();
+        
 }
 
 // Função para verificar se o token existe no localStorage
@@ -468,8 +534,8 @@ ipcMain.on('iniciar-atendimento', (event, itemId) => {
     });
 
     request.on('response', (response) => {
-        console.log(`STATUS: ${response.statusCode}`);
-        console.log(`HEADERS: ${JSON.stringify(response.headers)}`);
+        // console.log(`STATUS: ${response.statusCode}`);
+        // console.log(`HEADERS: ${JSON.stringify(response.headers)}`);
         response.on('data', (chunk) => {
             console.log(`BODY: ${chunk}`);
         });

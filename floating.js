@@ -3,7 +3,7 @@ const countSpan = document.getElementById('count');
 
 // Atualiza a contagem e a cor do botão quando recebe do main process
 window.electronAPI.onUpdateCount((value) => {
-    countSpan.textContent = value;
+    countSpan.innerHTML = value ?? 0;
     // Verifica a contagem para mudar a cor
     if (value > 0) {
         floatButton.classList.add('has-items'); // Adiciona a classe para cor avermelhada

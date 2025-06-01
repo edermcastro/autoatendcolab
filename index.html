@@ -6,14 +6,6 @@
     <title>Aguardando atendimento</title>
     <link rel="stylesheet" href="style.css">
     <script src="js/jquery/jquery.js"></script>
-    <style>
-        body {
-            margin: 10px;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-        }
-    </style>
 </head>
 <body>
     <div id="list-view">
@@ -23,80 +15,27 @@
             <!-- Itens serão carregados aqui -->
         </ul>
         <button id="next-button" disabled>Iniciar atendimento</button>
-        <button id="sendto-button" disabled>Encaminhar</button>
+        <!-- <button id="sendto-button" disabled>Encaminhar</button> -->
         <button id="logout-button">Trocar Colaborador</button>
 
     </div>
 
     <div id="obs-view" style="display: none;">
         <h1>Observações</h1>
-        <p>Item selecionado: <span id="selected-item-name"></span></p>
+        <p>Atendendo: <span id="selected-item-name"></span></p>
+        <input type="hidden" name="idAtend" id="idAtend">
         <textarea id="observation-text" rows="10" cols="50" placeholder="Digite suas observações..."></textarea>
         <button id="save-button">Salvar</button>
     </div>
 
     <div id="encaminhar-view" style="display: none;">
         <h1>Observações</h1>
-        <p>Item selecionado: <span id="selected-item-name"></span></p>
+        <p>Atendendo: <span id="selected-item-name"></span></p>
         <textarea id="observation-text" rows="10" cols="50" placeholder="Digite suas observações..."></textarea>
         <button id="save-button">Salvar</button>
     </div>
 
     <script src="renderer.js"></script>
-    <script>
-        $(function(){
 
-            let apiUrl = 'https://autoatend.linco.work/api/v1/';
-            let token = localStorage.getItem('authToken');
-            let colabId = localStorage.getItem('idOperator');
-
-            function obtemProximosLocalStorage(){
-                let datastorage = localStorage.getItem('proximos');
-
-                // Adiciona os outros itens apenas para visualização (opcional)
-                const proximos = JSON.parse(datastorage);
-
-                itemList.innerHTML = ''; // Limpa a lista anterior
-                if (!proximos || proximos.length === 0) {
-                    itemList.innerHTML = '<li>Nenhum item encontrado.</li>';
-                    nextButton.disabled = true;
-                    return;
-                }
-
-                // Seleciona o primeiro item por padrão (ou o próximo disponível)
-                // Aqui, vamos apenas pegar o primeiro da lista atual
-                const itemToProcess = proximos[0]; // Pega o primeiro item
-                if (itemToProcess) {
-                    selectedItemId = itemToProcess.id;
-                    selectedItemName = itemToProcess.clientName;
-                    const li = document.createElement('li');
-                    li.textContent = `${itemToProcess.senhaGen}: ${itemToProcess.clientName.toUpperCase()} - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
-                    li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
-                    li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
-                    itemList.appendChild(li);
-                    nextButton.disabled = false;
-                } else {
-                    itemList.innerHTML = '<li>Nenhum item para processar.</li>';
-                    nextButton.disabled = true;
-                    selectedItemId = null;
-                    selectedItemName = '';
-                }
-
-                // Adiciona os outros itens apenas para visualização (opcional)
-                proximos.slice(1).forEach(item => {
-                    const li = document.createElement('li');
-                    li.textContent = `${item.senhaGen}: ${item.clientName.toUpperCase()} - ${item.attendanceType.toUpperCase()} - ${item.descricaoServico.toUpperCase()}`;
-                    itemList.appendChild(li);
-                });
-
-            }
-
-
-            setTimeout(()=>{
-                obtemProximosLocalStorage();
-            },5000);
-
-        });
-    </script>
 </body>
 </html>

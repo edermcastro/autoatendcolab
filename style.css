@@ -2,7 +2,7 @@
 body {
     font-family: sans-serif;
     margin: 0;
-    padding: 0;
+    padding: 10px;
     background-color: transparent; /* Para janela flutuante */
     overflow: hidden; /* Evita barras de rolagem indesejadas na flutuante */
     -webkit-app-region: drag;
@@ -104,7 +104,7 @@ button:disabled {
 }
 
 textarea {
-    width: 95%; /* Ajuste conforme necessário */
+    width: calc(100% - 10px);
     margin-top: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;

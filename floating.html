@@ -13,62 +13,6 @@
         <span id="count">0</span>
     </button>
     <script src="floating.js"></script>
-    <script>
-        $(function(){
-            let apiUrl = 'https://autoatend.linco.work/api/v1/';
-            let token = localStorage.getItem('authToken');
-            let colabId = localStorage.getItem('idOperator');
-
-            function obtemProximos() {
-                if (!token && !colabId) {
-                    console.warn("Token or colabId not found in localStorage. API requests will not be made.");
-                    return; // Stop the function if token or colabId is missing
-                }
-
-                $.ajax(apiUrl + 'get-proximos/'+colabId, {
-                    method: 'GET',
-                    headers: { 'Authorization': 'Bearer '+token },
-                    // data: formData,
-                    processData: false,
-                    contentType: false,
-                    dataType: 'JSON',
-                    success: function(response) {
-                        console.log('Resposta:', response);
-                        // Ensure the response is valid JSON before parsing
-                        try {
-                            let proximos = response;
-                            localStorage.setItem('proximos', JSON.stringify(proximos));
-                            let count = proximos.length;
-                            $('#float-button span#count').text(count); // Atualiza o texto do botão.  Use .text() instead of .html()
-                            $('#float-button').removeClass(['without-items', 'has-items']).addClass( count > 0 ? 'has-items' : 'without-items');
-
-                        } catch (e) {
-                            console.error("Error parsing JSON response:", e);
-                            console.error("Response text:", response); // Log the raw response for debugging
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Erro na requisição:', status, error);
-                        console.error('Response Text:', xhr.responseText); // Log the response text for debugging
-                        // Optionally, handle different error codes:
-                        if (xhr.status === 401) {
-                            console.warn("Unauthorized. Token might be invalid.");
-                            // You could redirect the user to a login page here.
-                        } else if (xhr.status === 404) {
-                            console.warn("Resource not found. Check the API endpoint.");
-                        }
-                    }
-                });
-
-            }
-
-
-            // Call obtemProximos initially
-            obtemProximos();
-
-            // Set interval to call obtemProximos every 10 seconds
-            setInterval(obtemProximos, 30000);
-        });
-    </script>
+    
 </body>
 </html>
