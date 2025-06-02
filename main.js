@@ -20,11 +20,11 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 
 //// carrega o electron-reload, buga ao salvar o main.js por conta do fetchDataFromAPI
-if(!pjson.isBuildNow){
-    require('electron-reload')(__dirname,{
-        electron: require(`${__dirname}/node_modules/electron`)
-    })
-}
+// if(!pjson.isBuildNow){
+//     require('electron-reload')(__dirname,{
+//         electron: require(`${__dirname}/node_modules/electron`)
+//     })
+// }
 
 // Função modificada para buscar dados da API
 async function readData() {
@@ -55,7 +55,7 @@ async function fetchDataFromAPI() {
     
     const timer = setInterval(()=>{
         getAndUpdateDataStorage();
-    },30000);
+    },10000);
 }
 
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
