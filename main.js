@@ -53,9 +53,15 @@ async function fetchDataFromAPI() {
     //TODO propicio para fazer um webhook nessas funções que repetem a chamada  de requisições em busca de alterações
     getAndUpdateDataStorage(); 
     
-    const timer = setInterval(()=>{
+    const updData = setInterval(()=>{
         getAndUpdateDataStorage();
     },10000);
+
+    const updVersion = setTimeout(()=>{
+        if(pjson.isBuildNow){
+            autoUpdater.checkForUpdates();
+        }
+    },300000);
 }
 
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s

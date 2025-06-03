@@ -10,6 +10,7 @@ const saveButton = document.getElementById('save-button');
 const selectedItemNameSpan = document.getElementById('selected-item-name');
 const queueNumber = document.getElementById('queue-number');
 const idAtend = document.getElementById('idAtend');
+const counterStart = document.getElementById('counter-start');
 
 let currentData = [];
 let selectedItemId = null;
@@ -50,9 +51,19 @@ function populateList(currentData) {
     const proximos = JSON.parse(datastorage);
     
     itemList.innerHTML = ''; // Limpa a lista anterior
-    if (!proximos || proximos.length === 0 || !currentData) {
+    if (!proximos || proximos.length === 0) {
+        var count = 15;
         itemList.innerHTML = '<li>Fila vazia!</li>';
-        nextButton.disabled = !currentData;
+        nextButton.disabled = true;
+        const dec_counter = setInterval(() => {
+            count = count -1;
+            counterStart.innerHTML = `[ ${count} ]`;
+            if (count <= 0 && currentData) {
+                counterStart.innerHTML = '';
+                nextButton.disabled = false;
+                clearInterval(dec_counter);
+            }
+        },1000);
         return;
     }
 
@@ -60,6 +71,7 @@ function populateList(currentData) {
     // Aqui, vamos apenas pegar o primeiro da lista atual
     const itemToProcess = proximos[0]; // Pega o primeiro item
     if (itemToProcess) {
+        
         selectedItemId = itemToProcess.id;
         selectedItemName = itemToProcess.clientName;
         const li = document.createElement('li');
@@ -67,7 +79,8 @@ function populateList(currentData) {
         li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
-        nextButton.disabled = false;
+        
+        
     } else {
         itemList.innerHTML = '<li>Fila vazia!</li>';
         nextButton.disabled = !currentData;
