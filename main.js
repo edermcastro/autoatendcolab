@@ -237,7 +237,7 @@ function createUpdateWindow() {
 function createFloatingWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-    const winWidth = 50;
+    const winWidth = 60;
     const winHeight = 70;
 
     floatingWin = new BrowserWindow({

@@ -46,15 +46,15 @@ window.electronAPI.selectAtendID((data)=>{
 // Função para popular a lista de itens
 function populateList(currentData) {
     let datastorage = localStorage.getItem('proximos');
+    nextButton.disabled = true;
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
+    var count = 15;
     
     itemList.innerHTML = ''; // Limpa a lista anterior
-    if (!proximos || proximos.length === 0) {
-        var count = 15;
+    if (!proximos || proximos.length === 0 || !currentData) {
         itemList.innerHTML = '<li>Fila vazia!</li>';
-        nextButton.disabled = true;
         const dec_counter = setInterval(() => {
             count = count -1;
             counterStart.innerHTML = `[ ${count} ]`;
@@ -79,7 +79,16 @@ function populateList(currentData) {
         li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
-        
+
+        const dec_counter = setInterval(() => {
+            count = count -1;
+            counterStart.innerHTML = `[ ${count} ]`;
+            if (count <= 0 && currentData) {
+                counterStart.innerHTML = '';
+                nextButton.disabled = false;
+                clearInterval(dec_counter);
+            }
+        },1000);
         
     } else {
         itemList.innerHTML = '<li>Fila vazia!</li>';

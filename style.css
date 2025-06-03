@@ -65,7 +65,7 @@ body#floating{
     transition: background-color 0.3s ease; /* Suaviza a transição de cor */
     position: absolute;
     top: -6px;
-    left: 4px;
+    left: 8px;
     -webkit-app-region: no-drag;
     cursor: pointer;
 }
@@ -74,19 +74,25 @@ body#floating{
 #float-button.has-items {
     background-color: var(--opac-warning-color); /* Tom avermelhado/alaranjado com transparência */
     box-shadow: var(--inset-box-shadow); /* Sombra mais escura avermelhada */
-    border: 2px solid var(--dark-warning-color);
-    animation: pulse-border 2s infinite;
+    border: 4px solid var(--dark-warning-color);
+    animation: pulse-border .5s infinite;
 }
 
 @keyframes pulse-border {
     0% {
-        border-color: var(--dark-warning-color);
+        border-color: var(--medium-gold);
+        width: 64px;
+        height: 64px;
     }
     50% {
-        border-color: var(--warning-color);
+        width: 66px;
+        height: 66px;
+        border-color: var(--accent-gold);
     }
     100% {
-        border-color: var(--dark-warning-color);
+        width: 64px;
+        height: 64px;
+        border-color: var(--medium-gold);
     }
 }
 
