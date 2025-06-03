@@ -75,6 +75,19 @@ body#floating{
     background-color: var(--opac-warning-color); /* Tom avermelhado/alaranjado com transparência */
     box-shadow: var(--inset-box-shadow); /* Sombra mais escura avermelhada */
     border: 2px solid var(--dark-warning-color);
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        border-color: var(--dark-warning-color);
+    }
+    50% {
+        border-color: var(--warning-color);
+    }
+    100% {
+        border-color: var(--dark-warning-color);
+    }
 }
 
 #float-button:hover {
