@@ -50,7 +50,7 @@ function populateList(currentData) {
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
-    var count = 15;
+    var count = 8;
     
     itemList.innerHTML = ''; // Limpa a lista anterior
     if (!proximos || proximos.length === 0 || !currentData) {
@@ -113,7 +113,6 @@ function showListView() {
     encaminharView.style.display = 'none';
     observationView.style.display = 'none';
     observationText.value = ''; // Limpa a textarea
-    // nextButton.disabled = !selectedItemId; // Habilita/desabilita baseado na seleção
 }
 
 showListView();
@@ -149,8 +148,6 @@ saveButton.addEventListener('click', () => {
     if (selectedItemId !== null) {
         window.electronAPI.saveObservation({ itemId: selectedItemId, observation: observation });
         window.location.reload();
-        // A janela será escondida pelo main process após salvar (conforme main.js)
-        // Se quiser resetar a view sem esconder, chame showListView() aqui.
     }
 });
 

@@ -276,7 +276,6 @@ function createFloatingWindow() {
     floatingWin.on('closed', () => {
         floatingWin = null;
     });
-    // floatingWin.webContents.openDevTools();
 }
 
 function createMainWindow() {
