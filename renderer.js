@@ -24,6 +24,55 @@ window.electronAPI.onLoadData((data) => {
     populateList(data[0]); 
 });
 
+async function initializePusher() {
+    if (typeof window.electronAPI === 'undefined' || !window.electronAPI.getPusherConfig) {
+        console.error('electronAPI not available or getPusherConfig method missing.');
+        return;
+    }
+
+    const pusherConfig = await window.electronAPI.getPusherConfig();
+    const PUSHER_APP_KEY = pusherConfig.appKey;
+    let host = pusherConfig.host;
+
+    const channelLocal = localStorage.getItem('channel');
+    const colabId = localStorage.getItem('idOperator');
+
+    if (channelLocal && PUSHER_APP_KEY) {
+        Pusher.logToConsole = true;
+
+        var pusher = new Pusher(PUSHER_APP_KEY, {
+            wsHost: host,
+            wsPort: 6001,
+            wssPort: 6001,
+            forceTLS: false,
+            enableStats: false,
+            enabledTransports: ['ws','wss'],
+            cluster: 'mt1'
+        });
+
+        var channel = pusher.subscribe('chat.' + channelLocal + '_' + colabId);
+        channel.bind('message-sent', function(r) {
+            let count = r.data.fila.original.length;
+                console.log(r.data.fila.original);
+                localStorage.setItem('proximos',JSON.stringify(r.data.fila.original));
+
+            populateList(r.data.currentData.original);
+
+        });
+
+        pusher.connection.bind('error', function(err) {
+            console.error('Pusher connection error:', err);
+        });
+
+        console.log('Host de conexão:', host);
+    } else {
+        console.warn('User not authenticated or Pusher APP_KEY not available. Private channel not subscribed.');
+    }
+}
+
+initializePusher();
+
+
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data)=>{
     if(!data){
@@ -50,7 +99,7 @@ function populateList(currentData) {
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
-    var count = 8;
+    var count = 5;
     
     itemList.innerHTML = ''; // Limpa a lista anterior
     if (!proximos || proximos.length === 0 || !currentData) {
@@ -58,7 +107,7 @@ function populateList(currentData) {
         const dec_counter = setInterval(() => {
             count = count -1;
             counterStart.innerHTML = `[ ${count} ]`;
-            if (count <= 0 && currentData) {
+            if (count <= 0 || !currentData) {
                 counterStart.innerHTML = '';
                 nextButton.disabled = false;
                 clearInterval(dec_counter);

@@ -2,7 +2,12 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://autoatend.linco.work">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self'; 
+        script-src 'self' 'unsafe-inline'; 
+        style-src 'self' 'unsafe-inline'; 
+        connect-src 'self' ws://autoatend.linco.work:6001 ws://localhost:6001;
+    ">
     <title>Tela de Atendimento</title>
     <link rel="stylesheet" href="style.css">
     <script src="res/js/jquery/jquery.js"></script>
@@ -14,7 +19,10 @@
         <ul id="item-list">
             <!-- Itens serão carregados aqui -->
         </ul>
-        <button id="next-button" disabled><span id="counter-start"></span> Iniciar atendimento</button>
+        <button id="next-button" disabled>
+            <span id="counter-start"></span> 
+            Iniciar atendimento
+        </button>
         <!-- <button id="sendto-button" disabled>Encaminhar</button> -->
         <button id="logout-button">Trocar Colaborador</button>
 
@@ -35,6 +43,7 @@
         <button id="save-button">Salvar</button>
     </div>
 
+    <script src="res/js/pusher.min.js"></script>
     <script src="renderer.js"></script>
 
 </body>

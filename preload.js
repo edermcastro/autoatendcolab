@@ -4,6 +4,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     //carrega todos os atendimentos na fila
     onLoadData: (callback) => ipcRenderer.on('load-data', (_event, data) => callback(data)),
 
+    //carrega todos os atendimentoa via pusher
+    getPusherConfig: () => ipcRenderer.invoke('get-pusher-config'),
+    sendPusherEvent: (callback) => ipcRenderer.on('pusher-event-received', (_event, data) => callback(data)),
+
     //seleciona o atendimento atual
     selectAtendID: (callback) => ipcRenderer.on('select-atend-id', (_event, data) => callback(data)),
 

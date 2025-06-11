@@ -2,6 +2,7 @@ const operatorSelect = document.getElementById('operator-select');
 const selectButton = document.getElementById('select-button');
 const errorMessage = document.getElementById('error-message');
 const quitButton = document.getElementById('sair-button');
+const verionSpan = document.getElementById('version');
 
 // Carrega a lista de operadores ao iniciar
 window.addEventListener('DOMContentLoaded', async () => {
@@ -67,6 +68,12 @@ const selectedOperatorValue = operatorSelect.value;
         window.electronAPI.selectOperator(selectedOperator);
     }
 });
+
+window.electronAPI.showVersion((version) => {
+    verionSpan.textContent = `${version}`;
+});
+
+
 
 // Recebe resposta do processo de seleção
 window.electronAPI.onOperatorResponse((response) => {

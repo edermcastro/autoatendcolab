@@ -29,8 +29,10 @@
     <script>
         $(function(){
             let opse = localStorage.getItem('selectedOperator');
+            let vs = localStorage.getItem('version');
             setTimeout(()=>{
                 $('span.op').text(opse);
+                $('#version').text(vs);
             },2000);
         });
     </script>

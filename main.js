@@ -13,18 +13,15 @@ let updateWin;
 
 const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (backup local)
 const apiUrl = 'https://autoatend.linco.work/api/v1/';
+// const apiUrl = 'http://_lara10-autoatend.devel/api/v1/';
+
+const pusherUrl = 'autoatend.linco.work';
+// const pusherUrl = 'localhost';
 
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
-
-//// carrega o electron-reload, buga ao salvar o main.js por conta do fetchDataFromAPI
-// if(!pjson.isBuildNow){
-//     require('electron-reload')(__dirname,{
-//         electron: require(`${__dirname}/node_modules/electron`)
-//     })
-// }
 
 // Função modificada para buscar dados da API
 async function readData() {
@@ -50,12 +47,13 @@ async function readData() {
 async function fetchDataFromAPI() {
     //executa uma vez e a cada 30 segundos
 
-    //TODO propicio para fazer um webhook nessas funções que repetem a chamada  de requisições em busca de alterações
-    getAndUpdateDataStorage(); 
+    //TODO propicio para fazer um websockt nessas funções que repetem a chamada  de requisições em busca de alterações
+
+    getDataAndUpdateFloatingBtn();
     
     const updData = setInterval(()=>{
-        getAndUpdateDataStorage();
-    },10000);
+        getDataAndUpdateFloatingBtn();
+    },3000);
 
     const updVersion = setTimeout(()=>{
         if(pjson.isBuildNow){
@@ -65,74 +63,12 @@ async function fetchDataFromAPI() {
 }
 
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
-async function getAndUpdateDataStorage (){
+async function getDataAndUpdateFloatingBtn (){
 
-    const token = await getAuthToken();
-    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-    
-    const url = apiUrl + 'get-proximos/'+colabId; // URL de exemplo para enviar a solicitação
-    
-    if (!token && !colabId) {
-        console.warn("Token or colabId not found in localStorage. API requests will not be made.");
-        return; // Stop the function if token or colabId is missing
-    }
-
-    const request = net.request({
-        method: 'GET',
-        url: url,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        }
-    });
-
-    request.on('response', (response) => {
-        let rawData = '';
-
-        response.on('data', (chunk) => {
-            rawData += chunk;
-        });
-
-        response.on('end', () => {
-            try {
-                const parsedData = JSON.parse(rawData);
-                let proximos = parsedData;
-
-                if (response.statusCode === 200) {
-                    if(!mainWin.isVisible){
-                    //envia os dados para o loadData atualiza a tela somente se não estiver sendo exibida
-                        mainWin.webContents.send('load-data', proximos);
-                    }
-                    //grava os registros no localstorage
-                    floatingWin.webContents.executeJavaScript("localStorage.setItem('proximos','"+JSON.stringify(proximos)+"')");
-                    let count = proximos.length;
-                    //lista a contagem no botão flutuante
-                    floatingWin.webContents.send('update-count', count);
-                    console.log(`Dados carregados com sucesso!`);
-                } else {
-                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
-                    // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
-                    mainWin.webContents.send('api-error', {
-                        message: `Erro ao chamar atendimentos: ${parsedData.message || 'Erro desconhecido'}`
-                    });
-                }
-            } catch (error) {
-                console.error("Erro ao analisar a resposta JSON:", error);
-                mainWin.webContents.send('api-error', {
-                       message: `Erro ao processar resposta do servidor.`
-                });
-            }
-        });
-    });
-
-    request.on('error', (error) => {
-        console.error("Erro na requisição:", error);
-        mainWin.webContents.send('api-error', {
-            message: `Erro ao chamar atendimento: ${error.message}`
-        });
-    });
-
-    request.end();
+    const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
+    let count = proximos.length;
+        //lista a contagem no botão flutuante
+        floatingWin.webContents.send('update-count', count);
         
 }
 
@@ -360,7 +296,6 @@ app.whenReady().then(async () => {
             createFloatingWindow();
             createMainWindow();
         }
-        
     }
     createUpdateWindow();
 
@@ -423,6 +358,12 @@ async function getSelectedOperatorId() {
     });
 }
 
+ipcMain.handle('get-pusher-config', async () => {
+    // Obtenha sua chave e host de forma segura aqui (ambiente, .env, etc.)
+    const PUSHER_APP_KEY = process.env.PUSHER_APP_KEY || '1feb970af7708cb';
+    const PUSHER_HOST = process.env.PUSHER_HOST || pusherUrl;
+    return { appKey: PUSHER_APP_KEY, host: PUSHER_HOST };
+});
 
 ipcMain.on('update_version', async (event, arg) => {
     if(updateWin){
@@ -682,6 +623,7 @@ ipcMain.on('login-attempt', async (event, credentials) => {
                         // Login bem-sucedido
                         loginWin.webContents.executeJavaScript(`
                             localStorage.setItem("authToken", "${data.api_key}");
+                            localStorage.setItem("channel", "${data.channel}");
                         `).then(() => {
                             // Fecha a janela de login e abre a de seleção de operador
                             event.reply('login-response', { success: true });
@@ -864,5 +806,12 @@ ipcMain.on('token-exists', async () => {
 
 
 ipcMain.on('sair', ()=>{
-    app.exit();
+    operatorWin.webContents.executeJavaScript(`
+        localStorage.removeItem("idOperator");
+        localStorage.removeItem("selectedOperator");
+        localStorage.removeItem("salaOperator");
+        localStorage.removeItem("servicosOperator");
+    `).then(() => {
+        app.exit();
+    });
 });
