@@ -83,6 +83,7 @@ window.electronAPI.selectAtendID((data)=>{
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela
+    nextButton.disabled = true;
     populateList(data);
     showListView();
     selectedItemId = data.id ?? null;
@@ -95,11 +96,10 @@ window.electronAPI.selectAtendID((data)=>{
 // Função para popular a lista de itens
 function populateList(currentData) {
     let datastorage = localStorage.getItem('proximos');
-    nextButton.disabled = true;
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
-    var count = 5;
+    var count = 8;
     
     itemList.innerHTML = ''; // Limpa a lista anterior
     if (!proximos || proximos.length === 0 || !currentData) {
