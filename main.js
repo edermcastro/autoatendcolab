@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, net } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, net, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -67,8 +67,9 @@ async function getDataAndUpdateFloatingBtn (){
 
     const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
     let count = proximos.length;
-        //lista a contagem no botão flutuante
-        floatingWin.webContents.send('update-count', count);
+
+    //lista a contagem no botão flutuante
+    floatingWin.webContents.send('update-count', count);
         
 }
 
@@ -392,72 +393,119 @@ ipcMain.handle('get-count', async () => {
 // Ouvir pedido para mostrar a janela principal
 ipcMain.on('chamar-fila', async () => {
 
-    if (mainWin) {
-        if (!mainWin.isVisible()) {
-            mainWin.show();
-            mainWin.focus();
-        } else {
-            mainWin.focus();
-        }
-    } else {
-        createMainWindow(); // Cria se não existir
-        mainWin.webContents.on('did-finish-load', () => {
-             mainWin.show();
-             mainWin.focus();
-        });
+    const countFila = async () => {
+        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
+        return proximos.length;
     }
 
-    const colabId = await getSelectedOperatorId();
-    const token = await getAuthToken('token');
-    const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
+    const requestData = async () =>{
 
-    const request = net.request({
-        method: 'GET',
-        url: url,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+        if (mainWin) {
+            if (!mainWin.isVisible()) {
+                mainWin.show();
+                mainWin.focus();
+            } else {
+                mainWin.focus();
+            }
+        } else {
+            createMainWindow(); // Cria se não existir
+            mainWin.webContents.on('did-finish-load', () => {
+                mainWin.show();
+                mainWin.focus();
+            });
         }
-    });
 
-    request.on('response', (response) => {
-        let rawData = '';
 
-        response.on('data', (chunk) => {
-            rawData += chunk;
-        });
+        const colabId = await getSelectedOperatorId();
+        const token = await getAuthToken('token');
+        const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
 
-        response.on('end', () => {
-            try {
-                const parsedData = JSON.parse(rawData);
-
-                if (response.statusCode === 200) {
-                    mainWin.webContents.send('select-atend-id', parsedData.data);
-                    console.log(parsedData);
-                } else {
-                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
-                    // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
-                    mainWin.webContents.send('api-error', {
-                        message: `Erro ao chamar atendimento: ${parsedData.message || 'Erro desconhecido'}`
-                    });
-                }
-            } catch (error) {
-                console.error("Erro ao analisar a resposta JSON:", error);
-                mainWin.webContents.send('api-error', {
-                       message: `Erro ao processar resposta do servidor.`
-                });
+        const request = net.request({
+            method: 'GET',
+            url: url,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
             }
         });
-    });
 
-    request.on('error', (error) => {
-        console.error("Erro na requisição:", error);
-        mainWin.webContents.send('api-error', {
-            message: `Erro ao chamar atendimento: ${error.message}`
+        request.on('response', (response) => {
+            let rawData = '';
+
+            response.on('data', (chunk) => {
+                rawData += chunk;
+            });
+
+            response.on('end', () => {
+                try {
+                    const parsedData = JSON.parse(rawData);
+
+                    if (response.statusCode === 200) {
+                        mainWin.webContents.send('select-atend-id', parsedData.data);
+                        if(parsedData.data.Status === 'Atendendo'){
+                            let options2 = {
+                                'title': 'Precisa finalizar antes de chamar o próximo.',
+                                'message': 'Em andamento',
+                                'detail': 'Já possui um atendimento em andamento (Chamado/Atendendo), continue e finalize por favor!',
+                                'type': 'error',
+                                'noLink': true,
+                                'buttons': ['Depois','Continuar'],
+                            };
+                            dialog.showMessageBox(floatingWin, options2).then(result => {
+                                if(result.response){ 
+                                    mainWin.webContents.send('show-observation');
+                                };
+                            });
+                        }
+                        // console.log(parsedData);
+                    } else {
+                        console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
+                        // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
+                        mainWin.webContents.send('api-error', {
+                            message: `Erro ao chamar atendimento: ${parsedData.message || 'Erro desconhecido'}`
+                        });
+                    }
+                } catch (error) {
+                    console.error("Erro ao analisar a resposta JSON:", error);
+                    mainWin.webContents.send('api-error', {
+                        message: `Erro ao processar resposta do servidor.`
+                    });
+                }
+            });
         });
-    });
 
-    request.end();
+        request.on('error', (error) => {
+            console.error("Erro na requisição:", error);
+            mainWin.webContents.send('api-error', {
+                message: `Erro ao chamar atendimento: ${error.message}`
+            });
+        });
+
+        request.end();
+    };
+
+
+    
+    let options = {
+        'title': 'Incie o atendimento quando o cliente chegar na sala.',
+        'message': 'Chamar um cliente da fila?',
+        'type': 'warning',
+        'noLink': true,
+        'buttons': ['Não','Sim'],
+    };
+    
+
+    if(await countFila() > 0){
+        dialog.showMessageBox(floatingWin, options).then(result => {
+            if(result.response){ 
+                requestData();
+            };
+        });
+    }
+    
+    else {
+        requestData();
+    }
 
 });
 

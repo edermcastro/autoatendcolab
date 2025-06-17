@@ -17,6 +17,7 @@ let selectedItemId = null;
 let selectedItemName = '';
 
 window.electronAPI.onLoadData((data) => {
+    nextButton.disabled = true;
     if(!data){
         return;
     }
@@ -75,6 +76,7 @@ initializePusher();
 
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data)=>{
+    nextButton.disabled = true;
     if(!data){
         queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
         setTimeout(() => {
@@ -83,14 +85,17 @@ window.electronAPI.selectAtendID((data)=>{
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela
-    nextButton.disabled = true;
     populateList(data);
     showListView();
     selectedItemId = data.id ?? null;
     //data.senhaGen
     queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
     selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
+});
 
+window.electronAPI.showObservation(()=>{
+    window.electronAPI.iniciaAtendimento(selectedItemId);
+    showObservationView(); // Muda para a tela de observação
 });
 
 // Função para popular a lista de itens
@@ -99,28 +104,28 @@ function populateList(currentData) {
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
-    var count = 8;
+    // var count = 6;
     
-    itemList.innerHTML = ''; // Limpa a lista anterior
-    if (!proximos || proximos.length === 0 || !currentData) {
-        itemList.innerHTML = '<li>Fila vazia!</li>';
-        const dec_counter = setInterval(() => {
-            count = count -1;
-            counterStart.innerHTML = `[ ${count} ]`;
-            if (count <= 0 || !currentData) {
-                counterStart.innerHTML = '';
-                nextButton.disabled = false;
-                clearInterval(dec_counter);
-            }
-        },1000);
-        return;
-    }
+    // itemList.innerHTML = ''; // Limpa a lista anterior
+
+    // const dec_counter = setInterval(() => {
+    //     --count;
+    //     counterStart.innerHTML = `[ ${count} ]`;
+    //     if (count <= 0) {
+    //         counterStart.innerHTML = '';
+    //         nextButton.disabled = !currentData;
+    //         clearInterval(dec_counter);
+    //     }
+    // },1000);
+
+    setTimeout(()=>{
+        nextButton.disabled = !currentData;
+    },5000);
 
     // Seleciona o primeiro item por padrão (ou o próximo disponível)
     // Aqui, vamos apenas pegar o primeiro da lista atual
     const itemToProcess = proximos[0]; // Pega o primeiro item
     if (itemToProcess) {
-        
         selectedItemId = itemToProcess.id;
         selectedItemName = itemToProcess.clientName;
         const li = document.createElement('li');
@@ -128,20 +133,9 @@ function populateList(currentData) {
         li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
-
-        const dec_counter = setInterval(() => {
-            count = count -1;
-            counterStart.innerHTML = `[ ${count} ]`;
-            if (count <= 0 && currentData) {
-                counterStart.innerHTML = '';
-                nextButton.disabled = false;
-                clearInterval(dec_counter);
-            }
-        },1000);
-        
     } else {
         itemList.innerHTML = '<li>Fila vazia!</li>';
-        nextButton.disabled = !currentData;
+        nextButton.disabled = true;
         selectedItemId = null;
         selectedItemName = '';
     }
