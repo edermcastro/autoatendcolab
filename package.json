@@ -1,6 +1,6 @@
 {
   "name": "autoatendcolab",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "main.js",
   "isBuildNow": true,
   "scripts": {
@@ -38,6 +38,7 @@
   "description": "Sistema auxiliar para colaboradores de autoatendimento",
   "dependencies": {
     "@electron/remote": "^2.1.2",
+    "electron-single-instance": "^0.0.2",
     "electron-updater": "^6.6.2",
     "jquery": "^3.7.1"
   },

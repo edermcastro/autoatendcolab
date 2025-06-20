@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, screen, net, dialog } = require('electron');
+// const { app: singleInstanceLock } = require('electron-single-instance');
 const path = require('path');
 const fs = require('fs');
 
@@ -22,6 +23,8 @@ const pusherUrl = 'autoatend.linco.work';
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+//impede que o app seja executado mais de uma vez
+const gotTheLock = app.requestSingleInstanceLock();
 
 // Função modificada para buscar dados da API
 async function readData() {
@@ -275,48 +278,63 @@ if(pjson.isBuildNow){
 }
 
 
-
-// Inicialização do aplicativo modificada para verificar autenticação
-app.whenReady().then(async () => {
-
-    // Verifica se o usuário já está autenticado
-    const token = await getAuthToken();
-    
-    if (!token) {
-        // Se não estiver autenticado, mostra a tela de login
-        createLoginWindow();
-    } else {
-        // Se já estiver autenticado, verifica se tem operador selecionado
-        // const operator = await getSelectedOperator();
-
-        if (!operator || operator === 'null' || operator === null || operator === undefined || operator === '') {
-            // Se não tiver operador selecionado, mostra a tela de seleção
-            createOperatorWindow();
-        } else {
-            // Se já tiver operador, inicia normalmente
-            createFloatingWindow();
-            createMainWindow();
-        }
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWin) {
+      if (mainWin.isMinimized()) {
+        mainWin.restore();
+      }
+      mainWin.focus();
     }
-    createUpdateWindow();
+  });
 
-    app.on('activate', () => {
-        // No macOS é comum recriar uma janela no aplicativo quando o
-        // ícone do dock é clicado e não há outras janelas abertas.
-        if (BrowserWindow.getAllWindows().length === 0) {
-            // Poderia recriar a janela principal aqui se necessário,
-            // mas como temos a flutuante, talvez não precise.
-            if (!floatingWin) createFloatingWindow();
-            if (!mainWin) createMainWindow();
-            if (!updateWin) createUpdateWindow();
+    // Inicialização do aplicativo modificada para verificar autenticação
+    app.whenReady().then(async () => {
+
+        // Verifica se o usuário já está autenticado
+        const token = await getAuthToken();
+        
+        if (!token) {
+            // Se não estiver autenticado, mostra a tela de login
+            createLoginWindow();
+        } else {
+            // Se já estiver autenticado, verifica se tem operador selecionado
+            // const operator = await getSelectedOperator();
+
+            if (!operator || operator === 'null' || operator === null || operator === undefined || operator === '') {
+                // Se não tiver operador selecionado, mostra a tela de seleção
+                createOperatorWindow();
+            } else {
+                // Se já tiver operador, inicia normalmente
+                createFloatingWindow();
+                createMainWindow();
+            }
         }
+        createUpdateWindow();
+
+        app.on('activate', () => {
+            // No macOS é comum recriar uma janela no aplicativo quando o
+            // ícone do dock é clicado e não há outras janelas abertas.
+            if (BrowserWindow.getAllWindows().length === 0) {
+                // Poderia recriar a janela principal aqui se necessário,
+                // mas como temos a flutuante, talvez não precise.
+                if (!floatingWin) createFloatingWindow();
+                if (!mainWin) createMainWindow();
+                if (!updateWin) createUpdateWindow();
+            }
+        });
+
+        if(pjson.isBuildNow){
+            autoUpdater.checkForUpdates();
+        }
+
     });
 
-    if(pjson.isBuildNow){
-        autoUpdater.checkForUpdates();
-    }
+}
 
-});
+
 
 // Função para verificar se já existe um operador selecionado
 async function getSelectedOperator() {
