@@ -80,6 +80,7 @@ window.electronAPI.selectAtendID((data)=>{
     if(!data){
         queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
         setTimeout(() => {
+            localStorage.removeItem('proximos');
             window.close();
         },5000);
         return;
@@ -104,19 +105,7 @@ function populateList(currentData) {
 
     // Adiciona os outros itens apenas para visualização (opcional)
     const proximos = JSON.parse(datastorage);
-    // var count = 6;
-    
-    // itemList.innerHTML = ''; // Limpa a lista anterior
-
-    // const dec_counter = setInterval(() => {
-    //     --count;
-    //     counterStart.innerHTML = `[ ${count} ]`;
-    //     if (count <= 0) {
-    //         counterStart.innerHTML = '';
-    //         nextButton.disabled = !currentData;
-    //         clearInterval(dec_counter);
-    //     }
-    // },1000);
+    itemList.innerHTML = '';
 
     setTimeout(()=>{
         nextButton.disabled = !currentData;

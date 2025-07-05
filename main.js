@@ -68,7 +68,7 @@ async function fetchDataFromAPI() {
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
 async function getDataAndUpdateFloatingBtn (){
 
-    const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
+    const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
     let count = proximos.length;
 
     //lista a contagem no botão flutuante
@@ -412,7 +412,7 @@ ipcMain.handle('get-count', async () => {
 ipcMain.on('chamar-fila', async () => {
 
     const countFila = async () => {
-        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
+        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
         return proximos.length;
     }
 
@@ -457,14 +457,15 @@ ipcMain.on('chamar-fila', async () => {
             response.on('end', () => {
                 try {
                     const parsedData = JSON.parse(rawData);
+                    console.log(parsedData);
 
                     if (response.statusCode === 200) {
                         mainWin.webContents.send('select-atend-id', parsedData.data);
-                        if(parsedData.data.Status === 'Atendendo'){
+                        if(parsedData.data && parsedData.data.Status === 'Atendendo'){
                             let options2 = {
                                 'title': 'Precisa finalizar antes de chamar o próximo.',
                                 'message': 'Em andamento',
-                                'detail': 'Já possui um atendimento em andamento (Chamado/Atendendo), continue e finalize por favor!',
+                                'detail': 'Já possui um atendimento em andamento (Atendendo: '+ parsedData.data.clientName +'), continue e finalize por favor!',
                                 'type': 'error',
                                 'noLink': true,
                                 'buttons': ['Depois','Continuar'],
@@ -472,6 +473,8 @@ ipcMain.on('chamar-fila', async () => {
                             dialog.showMessageBox(floatingWin, options2).then(result => {
                                 if(result.response){ 
                                     mainWin.webContents.send('show-observation');
+                                } else {
+                                    mainWin.hide();
                                 };
                             });
                         }
@@ -513,15 +516,13 @@ ipcMain.on('chamar-fila', async () => {
     };
     
 
-    if(await countFila() > 0){
+    if(await countFila()){
         dialog.showMessageBox(floatingWin, options).then(result => {
             if(result.response){ 
                 requestData();
             };
         });
-    }
-    
-    else {
+    } else {
         requestData();
     }
 
