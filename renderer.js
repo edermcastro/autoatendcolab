@@ -79,10 +79,10 @@ window.electronAPI.selectAtendID((data)=>{
     nextButton.disabled = true;
     if(!data){
         queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
-        setTimeout(() => {
-            localStorage.removeItem('proximos');
-            window.close();
-        },5000);
+        // setTimeout(() => {
+        //     localStorage.removeItem('proximos');
+        //     window.close();
+        // },5000);
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela

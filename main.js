@@ -416,8 +416,7 @@ ipcMain.on('chamar-fila', async () => {
         return proximos.length;
     }
 
-    const requestData = async () =>{
-
+    const showMainWindow = () => {
         if (mainWin) {
             if (!mainWin.isVisible()) {
                 mainWin.show();
@@ -432,6 +431,11 @@ ipcMain.on('chamar-fila', async () => {
                 mainWin.focus();
             });
         }
+    }
+
+    const requestData = async () =>{
+
+        
 
 
         const colabId = await getSelectedOperatorId();
@@ -457,10 +461,9 @@ ipcMain.on('chamar-fila', async () => {
             response.on('end', () => {
                 try {
                     const parsedData = JSON.parse(rawData);
-                    console.log(parsedData);
-
                     if (response.statusCode === 200) {
                         mainWin.webContents.send('select-atend-id', parsedData.data);
+                        if (parsedData.data && (parsedData.data.Status === 'Fila' || parsedData.data.Status === 'Chamado')) { showMainWindow(); } else
                         if(parsedData.data && parsedData.data.Status === 'Atendendo'){
                             let options2 = {
                                 'title': 'Precisa finalizar antes de chamar o próximo.',
@@ -473,6 +476,7 @@ ipcMain.on('chamar-fila', async () => {
                             dialog.showMessageBox(floatingWin, options2).then(result => {
                                 if(result.response){ 
                                     mainWin.webContents.send('show-observation');
+                                    showMainWindow();
                                 } else {
                                     mainWin.hide();
                                 };
