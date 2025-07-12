@@ -17,5 +17,11 @@ floatButton.addEventListener('click', () => {
     window.electronAPI.showMainWindow();
 });
 
+// Adiciona um listener para o evento de clique com o botão direito
+floatButton.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // Impede o menu padrão do navegador
+    window.electronAPI.showMenu(); // Chama a função para mostrar o menu no processo principal
+});
+
 // Ajuste inicial do cursor
 floatButton.style.cursor = 'pointer';

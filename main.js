@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, net, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, net, dialog, Menu } = require('electron');
 // const { app: singleInstanceLock } = require('electron-single-instance');
 const path = require('path');
 const fs = require('fs');
@@ -877,12 +877,65 @@ ipcMain.on('token-exists', async () => {
 
 
 ipcMain.on('sair', ()=>{
-    operatorWin.webContents.executeJavaScript(`
-        localStorage.removeItem("idOperator");
-        localStorage.removeItem("selectedOperator");
-        localStorage.removeItem("salaOperator");
-        localStorage.removeItem("servicosOperator");
-    `).then(() => {
-        app.exit();
+    let exec = `
+            localStorage.removeItem("idOperator");
+            localStorage.removeItem("selectedOperator");
+            localStorage.removeItem("salaOperator");
+            localStorage.removeItem("servicosOperator");
+        `;
+
+    let options = {
+        'title': 'Deseja realmente sair?',
+        'message': 'Tem certeza que deseja fechar o Auto Atendimento?',
+        'type': 'question',
+        'buttons': ['Não', 'Sim'],
+        'defaultId': 0,
+        'cancelId': 0,
+    };
+
+    dialog.showMessageBox(floatingWin, options).then(result => {
+        if (result.response === 1) { // Se o usuário clicou em "Sim" (índice 1)
+            if (floatingWin) {
+                floatingWin.webContents.executeJavaScript(exec).then(() => { app.exit(); });
+            } else if (operatorWin) {
+                operatorWin.webContents.executeJavaScript(exec).then(() => { app.exit(); });
+            }
+        }
     });
+    
+});
+
+
+ipcMain.on('show-context-menu', (event) => {
+    const template = [
+        {
+            label: 'Chamar Fila',
+            click: () => {
+                // Lógica para chamar atendimento
+                if (floatingWin) {
+                    ipcMain.emit('chamar-fila');
+                }
+            }
+        },
+        {
+            label: 'Trocar Colab',
+            click: () => {
+                // Lógica para chamar atendimento
+                if (floatingWin) {
+                    ipcMain.emit('logout');
+                }
+            }
+        },
+        {
+            label: 'Sair',
+            click: () => {
+                // Lógica para fechar o aplicativo
+                if (floatingWin) {
+                    ipcMain.emit('sair');
+                }
+            }
+        }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: floatingWin });
 });
