@@ -38,7 +38,8 @@ async function initializePusher() {
     const channelLocal = localStorage.getItem('channel');
     const colabId = localStorage.getItem('idOperator');
 
-    if (channelLocal && PUSHER_APP_KEY) {
+    //! checa se ja tem o colabId
+    if (channelLocal && colabId && PUSHER_APP_KEY) {
         Pusher.logToConsole = true;
 
         var pusher = new Pusher(PUSHER_APP_KEY, {
@@ -51,21 +52,28 @@ async function initializePusher() {
             cluster: 'mt1'
         });
 
-        var channel = pusher.subscribe('chat.' + channelLocal + '_' + colabId);
+        let channel;
+        if (pusher.connection.state === 'connected') {
+            pusher.unsubscribe('chat.' + channelLocal + '_' + colabId);
+        }
+        
+        channel = pusher.subscribe('chat.' + channelLocal + '_' + colabId);
+
         channel.bind('message-sent', function(r) {
-            let count = r.data.fila.original.length;
-                console.log(r.data.fila.original);
-                localStorage.setItem('proximos',JSON.stringify(r.data.fila.original));
+            let data = r.data.fila.original;
+            let count = data.length;
+                console.log(data);
+                localStorage.setItem('proximos',JSON.stringify(data));
 
             populateList(r.data.currentData.original);
 
         });
 
         pusher.connection.bind('error', function(err) {
-            console.error('Pusher connection error:', err);
+            console.error('Pusher connection error: ', err);
         });
 
-        console.log('Host de conexão:', host);
+        console.log('Host de conexão: ', host);
     } else {
         console.warn('User not authenticated or Pusher APP_KEY not available. Private channel not subscribed.');
     }
@@ -73,16 +81,11 @@ async function initializePusher() {
 
 initializePusher();
 
-
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data)=>{
     nextButton.disabled = true;
     if(!data){
         queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
-        // setTimeout(() => {
-        //     localStorage.removeItem('proximos');
-        //     window.close();
-        // },5000);
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela

@@ -50,10 +50,10 @@ async function readData() {
 async function fetchDataFromAPI() {
     //executa uma vez e a cada 30 segundos
 
-    //TODO propicio para fazer um websockt nessas funções que repetem a chamada  de requisições em busca de alterações
-
-    getDataAndUpdateFloatingBtn();
+    //!primeira requisição é feita para API
+    getFirstData();
     
+    //! as outras é o websockt que solicita a chamada  de requisições em busca de alterações
     const updData = setInterval(()=>{
         getDataAndUpdateFloatingBtn();
     },3000);
@@ -63,6 +63,57 @@ async function fetchDataFromAPI() {
             autoUpdater.checkForUpdates();
         }
     },300000);
+}
+
+async function getFirstData(){
+
+    const token = await getAuthToken();
+    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
+    const url = apiUrl + 'get-proximos/' + colabId;
+
+    //!  checa se o token e o colabId existem
+    if (!token && !colabId) { console.warn("Token or colabId not found in localStorage. API requests will not be made."); return; }
+
+    //!  faz o request
+    const request = net.request({
+        method: 'GET',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    //! busca pela resposta
+    request.on('response', (response) => {
+        let rawData = '';
+        response.on('data', (chunk) => { rawData += chunk; });
+        response.on('end', () => {
+            try {
+                const parsedData = JSON.parse(rawData);
+                let proximos = parsedData;
+                if (response.statusCode === 200) {
+                    floatingWin.webContents.executeJavaScript("localStorage.setItem('proximos','" + JSON.stringify(proximos) + "')");
+                    let count = proximos.length;
+                    floatingWin.webContents.send('update-count', count);
+                } else {
+                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
+                }
+            } catch (error) {
+                console.error("Erro ao analisar a resposta JSON:", error);
+                mainWin.webContents.send('api-error', {
+                    message: `Erro ao processar resposta do servidor.`
+                });
+            }
+        });
+    });
+    request.on('error', (error) => {
+        console.error("Erro na requisição:", error);
+    });
+
+    request.end();
+
+    return JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
 }
 
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
