@@ -91,7 +91,11 @@ window.electronAPI.selectAtendID((data) => {
     // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela
     populateList(data);
     showListView();
+
+    // Garante que o item selecionado (ID e Nome) seja o que veio da chamada, sobrescrevendo o da lista.
     selectedItemId = data.id ?? null;
+    selectedItemName = data.clientName ?? '';
+
     //data.senhaGen
     queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
     selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
@@ -104,6 +108,16 @@ window.electronAPI.showObservation(() => {
 
 // Função para popular a lista de itens
 function populateList(currentData) {
+    const atendimentoEmAndamentoId = localStorage.getItem('atendimentoAtual');
+    const atendimentoEmAndamentoNome = localStorage.getItem('atendimentoAtualNome');
+
+    if (atendimentoEmAndamentoId) {
+        itemList.innerHTML = `<li>Atendimento com <strong>${(atendimentoEmAndamentoNome || '').toUpperCase()}</strong> em andamento.</li>`;
+        queueNumber.innerHTML = `EM ATENDIMENTO: <u>${(atendimentoEmAndamentoNome || '').toUpperCase()}</u>`;
+        nextButton.disabled = true;
+        return;
+    }
+
     let datastorage = localStorage.getItem('proximos');
 
     // Adiciona os outros itens apenas para visualização (opcional)
@@ -142,6 +156,19 @@ function populateList(currentData) {
 }
 
 
+// Verifica o estado ao carregar a janela
+document.addEventListener('DOMContentLoaded', () => {
+    const atendimentoEmAndamentoId = localStorage.getItem('atendimentoAtual');
+    if (atendimentoEmAndamentoId) {
+        // Se um atendimento está em andamento, a tela de observação deve ser mostrada
+        selectedItemId = atendimentoEmAndamentoId;
+        selectedItemName = localStorage.getItem('atendimentoAtualNome');
+        selectedItemNameSpan.innerHTML = `<u> ${(selectedItemName || '').toUpperCase()} </u>`;
+        showObservationView();
+    }
+});
+
+
 //mostra a tela de listagem e permite iniciar o atendimento
 function showListView() {
     listView.style.display = 'block';
@@ -163,6 +190,12 @@ function showObservationView() {
 // // Evento do botão "Iniciar atendimento"
 nextButton.addEventListener('click', () => {
     if (selectedItemId !== null) {
+        // Salva o estado de atendimento no localStorage
+        localStorage.setItem('atendimentoAtual', selectedItemId);
+        localStorage.setItem('atendimentoAtualNome', selectedItemName);
+
+        // Notifica o main process e muda a view
+        window.electronAPI.atendimentoIniciado(selectedItemId);
         window.electronAPI.iniciaAtendimento(selectedItemId);
         showObservationView(); // Muda para a tela de observação
     } else {
@@ -181,6 +214,11 @@ logoutButton.addEventListener('click', () => {
 saveButton.addEventListener('click', () => {
     const observation = observationText.value;
     if (selectedItemId !== null) {
+        // Limpa o estado de atendimento
+        localStorage.removeItem('atendimentoAtual');
+        localStorage.removeItem('atendimentoAtualNome');
+        window.electronAPI.atendimentoFinalizado();
+
         window.electronAPI.saveObservation({ itemId: selectedItemId, observation: observation });
         window.location.reload();
     }

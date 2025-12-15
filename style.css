@@ -78,6 +78,13 @@ body#floating{
     animation: pulse-border .5s infinite;
 }
 
+/* Nova classe para quando estiver em atendimento */
+#float-button.em-atendimento {
+    background-color: var(--danger-color); /* Vermelho */
+    border: 4px solid var(--dark-danger-color);
+    animation: pulse-border .2s infinite; /* Pulso mais rápido */
+}
+
 @keyframes pulse-border {
     0% {
         border-color: var(--medium-gold);

@@ -462,10 +462,8 @@ ipcMain.handle('get-count', async () => {
 // Ouvir pedido para mostrar a janela principal
 ipcMain.on('chamar-fila', async () => {
 
-    const countFila = async () => {
-        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
-        return proximos.length;
-    }
+    // Primeiro, verifica se já existe um atendimento em andamento
+    const atendimentoAtualId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('atendimentoAtual')");
 
     const showMainWindow = () => {
         if (mainWin) {
@@ -482,6 +480,19 @@ ipcMain.on('chamar-fila', async () => {
                 mainWin.focus();
             });
         }
+    }
+
+    // Se um atendimento já estiver em andamento, apenas mostra a janela principal.
+    // A lógica em renderer.js cuidará de exibir a tela de observação.
+    if (atendimentoAtualId) {
+        showMainWindow();
+        return; // Interrompe a execução aqui
+    }
+
+    // Se não houver atendimento em andamento, continua com a lógica original.
+    const countFila = async () => {
+        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
+        return proximos.length;
     }
 
     const requestData = async () => {
@@ -583,6 +594,14 @@ ipcMain.on('chamar-fila', async () => {
 
 });
 
+// Ouve um pedido da janela flutuante para forçar a atualização da contagem
+ipcMain.on('refresh-count', async () => {
+    if (floatingWin) {
+        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
+        floatingWin.webContents.send('update-count', proximos.length);
+    }
+});
+
 ipcMain.on('select-atend-id', (itemId) => {
     selectedItemId = itemId;
     console.log(selectedItemId);
@@ -630,6 +649,20 @@ ipcMain.on('iniciar-atendimento', async (event, itemId) => {
 
     // Não precisamos esperar a resposta para mudar a UI na janela principal
     // A janela principal já mudou a UI ao enviar o evento 'next-step'
+});
+
+// Ouve quando um atendimento é iniciado e notifica a janela flutuante
+ipcMain.on('atendimento-iniciado', (event, itemId) => {
+    if (floatingWin) {
+        floatingWin.webContents.send('atendimento-status-changed', 'iniciado');
+    }
+});
+
+// Ouve quando um atendimento é finalizado e notifica a janela flutuante
+ipcMain.on('atendimento-finalizado', () => {
+    if (floatingWin) {
+        floatingWin.webContents.send('atendimento-status-changed', 'finalizado');
+    }
 });
 
 // Ouvir clique no botão "Salvar"

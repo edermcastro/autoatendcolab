@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     //inicia o atendimento atual
     iniciaAtendimento: (itemId) => ipcRenderer.send('iniciar-atendimento', itemId),
 
+    //notifica sobre o status do atendimento
+    atendimentoIniciado: (itemId) => ipcRenderer.send('atendimento-iniciado', itemId),
+    atendimentoFinalizado: () => ipcRenderer.send('atendimento-finalizado'),
+
     showObservation: (callback) => ipcRenderer.on('show-observation', (_event) => callback() ),
     //salva a observação do atendimento
     saveObservation: (data) => ipcRenderer.send('save-observation', data),
