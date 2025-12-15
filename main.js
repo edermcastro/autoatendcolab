@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { autoUpdater, AppUpdater } = require('electron-updater');
-const pjson = require(path.join(__dirname,'','package.json'));
+const pjson = require(path.join(__dirname, '', 'package.json'));
 
 let floatingWin;
 let mainWin;
@@ -16,7 +16,7 @@ const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (back
 const apiUrl = 'https://autoatend.linco.work/api/v1/';
 // const apiUrl = 'http://_lara10-autoatend.devel/api/v1/';
 
-const pusherUrl = 'autoatend.linco.work';
+const pusherUrl = 'aa.linco.work';
 // const pusherUrl = 'localhost';
 
 
@@ -32,14 +32,14 @@ async function readData() {
         // Verifica se existe token de autenticação
         const token = await getAuthToken();
         const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-        
+
         if (!token || !colabId) {
             console.log("Usuário não autenticado, retornando lista vazia");
             return [];
         }
-        
+
         // Tenta buscar dados da API
-        return await fetchDataFromAPI(); 
+        return await fetchDataFromAPI();
 
     } catch (error) {
         console.error("Erro ao buscar dados da API:", error);
@@ -52,20 +52,20 @@ async function fetchDataFromAPI() {
 
     //!primeira requisição é feita para API
     getFirstData();
-    
-    //! as outras é o websockt que solicita a chamada  de requisições em busca de alterações
-    const updData = setInterval(()=>{
-        getDataAndUpdateFloatingBtn();
-    },3000);
 
-    const updVersion = setTimeout(()=>{
-        if(pjson.isBuildNow){
+    //! as outras é o websockt que solicita a chamada  de requisições em busca de alterações
+    const updData = setInterval(() => {
+        getDataAndUpdateFloatingBtn();
+    }, 3000);
+
+    const updVersion = setTimeout(() => {
+        if (pjson.isBuildNow) {
             autoUpdater.checkForUpdates();
         }
-    },300000);
+    }, 300000);
 }
 
-async function getFirstData(){
+async function getFirstData() {
 
     const token = await getAuthToken();
     const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
@@ -117,14 +117,14 @@ async function getFirstData(){
 }
 
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
-async function getDataAndUpdateFloatingBtn (){
+async function getDataAndUpdateFloatingBtn() {
 
     const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
     let count = proximos.length;
 
     //lista a contagem no botão flutuante
     floatingWin.webContents.send('update-count', count);
-        
+
 }
 
 // Função para verificar se o token existe no localStorage
@@ -160,7 +160,7 @@ function createLoginWindow() {
         icon: "icon.ico",
         frame: true,
         autoHideMenuBar: true,
-        
+
         webPreferences: {
             preload: path.join(__dirname, 'login_preload.js'),
             contextIsolation: true,
@@ -195,7 +195,7 @@ function createOperatorWindow() {
     // operatorWin.webContents.openDevTools();
 
     operatorWin.loadFile('operator.html');
-    
+
     operatorWin.on('closed', () => {
         operatorWin = null;
     });
@@ -218,7 +218,7 @@ function createUpdateWindow() {
     });
 
     updateWin.loadFile('update.html');
-    
+
     updateWin.on('closed', () => {
         updateWin = null;
     });
@@ -256,7 +256,7 @@ function createFloatingWindow() {
 
     floatingWin.loadFile('floating.html');
 
-    floatingWin.webContents.executeJavaScript('localStorage.setItem("version","'+app.getVersion()+'")');
+    floatingWin.webContents.executeJavaScript('localStorage.setItem("version","' + app.getVersion() + '")');
 
     // Envia a contagem inicial para a janela flutuante
     const data = readData();
@@ -307,46 +307,46 @@ function createMainWindow() {
 }
 
 
-if(pjson.isBuildNow){
+if (pjson.isBuildNow) {
     autoUpdater.on('update-available', () => {
         let pth = autoUpdater.downloadUpdate();
         updateWin.show(); updateWin.focus();
-        updateWin.webContents.send('update_message',`Uma nova versão está dispinível.`);
-        updateWin.webContents.send('update_percent',pth);
+        updateWin.webContents.send('update_message', `Uma nova versão está dispinível.`);
+        updateWin.webContents.send('update_percent', pth);
     })
-    autoUpdater.on('download-progress',(obj) => {
-        updateWin.webContents.send('update_message',`Estamos baixando uma nova atualização.`);
+    autoUpdater.on('download-progress', (obj) => {
+        updateWin.webContents.send('update_message', `Estamos baixando uma nova atualização.`);
     });
-    autoUpdater.on('update-downloaded',(obj) => {
-        updateWin.webContents.send('update_message',`Download concluído. Aguarde, vamos reiniciar para instalar!`);
-        setTimeout(()=>{
+    autoUpdater.on('update-downloaded', (obj) => {
+        updateWin.webContents.send('update_message', `Download concluído. Aguarde, vamos reiniciar para instalar!`);
+        setTimeout(() => {
             autoUpdater.quitAndInstall();
-        },5000);
+        }, 5000);
     });
-    autoUpdater.on('error',err => {
-        updateWin.webContents.send('update_message',err);
+    autoUpdater.on('error', err => {
+        updateWin.webContents.send('update_message', err);
     });
 }
 
 
 if (!gotTheLock) {
-  app.quit();
+    app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (mainWin) {
-      if (mainWin.isMinimized()) {
-        mainWin.restore();
-      }
-      mainWin.focus();
-    }
-  });
+    app.on('second-instance', () => {
+        if (mainWin) {
+            if (mainWin.isMinimized()) {
+                mainWin.restore();
+            }
+            mainWin.focus();
+        }
+    });
 
     // Inicialização do aplicativo modificada para verificar autenticação
     app.whenReady().then(async () => {
 
         // Verifica se o usuário já está autenticado
         const token = await getAuthToken();
-        
+
         if (!token) {
             // Se não estiver autenticado, mostra a tela de login
             createLoginWindow();
@@ -377,7 +377,7 @@ if (!gotTheLock) {
             }
         });
 
-        if(pjson.isBuildNow){
+        if (pjson.isBuildNow) {
             autoUpdater.checkForUpdates();
         }
 
@@ -436,18 +436,18 @@ ipcMain.handle('get-pusher-config', async () => {
 });
 
 ipcMain.on('update_version', async (event, arg) => {
-    if(updateWin){
-        if(!updateWin.isVisible()){
+    if (updateWin) {
+        if (!updateWin.isVisible()) {
             updateWin.show();
             updateWin.focus();
-        }else{
+        } else {
             updateWin.focus();
         }
     } else {
         createUpdateWindow();
         updateWin.webContents.on('did-finish-load', () => {
-             updateWin.show();
-             updateWin.focus();
+            updateWin.show();
+            updateWin.focus();
         });
     }
 });
@@ -484,14 +484,14 @@ ipcMain.on('chamar-fila', async () => {
         }
     }
 
-    const requestData = async () =>{
+    const requestData = async () => {
 
-        
+
 
 
         const colabId = await getSelectedOperatorId();
         const token = await getAuthToken('token');
-        const url = apiUrl + 'chama-fila-app-colab/'+colabId; // URL de exemplo para enviar a solicitação
+        const url = apiUrl + 'chama-fila-app-colab/' + colabId; // URL de exemplo para enviar a solicitação
 
         const request = net.request({
             method: 'GET',
@@ -515,24 +515,24 @@ ipcMain.on('chamar-fila', async () => {
                     if (response.statusCode === 200) {
                         mainWin.webContents.send('select-atend-id', parsedData.data);
                         if (parsedData.data && (parsedData.data.Status === 'Fila' || parsedData.data.Status === 'Chamado')) { showMainWindow(); } else
-                        if(parsedData.data && parsedData.data.Status === 'Atendendo'){
-                            let options2 = {
-                                'title': 'Precisa finalizar antes de chamar o próximo.',
-                                'message': 'Em andamento',
-                                'detail': 'Já possui um atendimento em andamento (Atendendo: '+ parsedData.data.clientName +'), continue e finalize por favor!',
-                                'type': 'error',
-                                'noLink': true,
-                                'buttons': ['Depois','Continuar'],
-                            };
-                            dialog.showMessageBox(floatingWin, options2).then(result => {
-                                if(result.response){ 
-                                    mainWin.webContents.send('show-observation');
-                                    showMainWindow();
-                                } else {
-                                    mainWin.hide();
+                            if (parsedData.data && parsedData.data.Status === 'Atendendo') {
+                                let options2 = {
+                                    'title': 'Precisa finalizar antes de chamar o próximo.',
+                                    'message': 'Em andamento',
+                                    'detail': 'Já possui um atendimento em andamento (Atendendo: ' + parsedData.data.clientName + '), continue e finalize por favor!',
+                                    'type': 'error',
+                                    'noLink': true,
+                                    'buttons': ['Depois', 'Continuar'],
                                 };
-                            });
-                        }
+                                dialog.showMessageBox(floatingWin, options2).then(result => {
+                                    if (result.response) {
+                                        mainWin.webContents.send('show-observation');
+                                        showMainWindow();
+                                    } else {
+                                        mainWin.hide();
+                                    };
+                                });
+                            }
                         // console.log(parsedData);
                     } else {
                         console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
@@ -561,19 +561,19 @@ ipcMain.on('chamar-fila', async () => {
     };
 
 
-    
+
     let options = {
         'title': 'Incie o atendimento quando o cliente chegar na sala.',
         'message': 'Chamar um cliente da fila?',
         'type': 'warning',
         'noLink': true,
-        'buttons': ['Não','Sim'],
+        'buttons': ['Não', 'Sim'],
     };
-    
 
-    if(await countFila()){
+
+    if (await countFila()) {
         dialog.showMessageBox(floatingWin, options).then(result => {
-            if(result.response){ 
+            if (result.response) {
                 requestData();
             };
         });
@@ -583,7 +583,7 @@ ipcMain.on('chamar-fila', async () => {
 
 });
 
-ipcMain.on('select-atend-id',(itemId)=>{
+ipcMain.on('select-atend-id', (itemId) => {
     selectedItemId = itemId;
     console.log(selectedItemId);
 });
@@ -595,9 +595,9 @@ ipcMain.on('iniciar-atendimento', async (event, itemId) => {
     const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
     //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
 
-    const url = apiUrl + 'iniciar-atendimento/'+itemId; // URL de exemplo para enviar a solicitação
+    const url = apiUrl + 'iniciar-atendimento/' + itemId; // URL para enviar a solicitação
 
-    // Simula o envio de uma solicitação POST com o ID do item
+    // envio de uma solicitação POST com o ID do item
     const request = net.request({
         method: 'GET',
         url: url,
@@ -643,7 +643,7 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
     const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
     //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
 
-    const url = apiUrl + 'finalizar-atendimento/'+itemId; // URL de exemplo para enviar a solicitação
+    const url = apiUrl + 'finalizar-atendimento/' + itemId; // URL de exemplo para enviar a solicitação
 
     const fmData = JSON.stringify({
         "colabId": colabId,
@@ -699,7 +699,7 @@ ipcMain.on('drag-float-window', (event, { offsetX, offsetY }) => {
 */
 
 
-ipcMain.on('logout', ()=>{
+ipcMain.on('logout', () => {
     mainWin.webContents.executeJavaScript(`
             localStorage.removeItem("idOperator");
             localStorage.removeItem("selectedOperator");
@@ -719,7 +719,7 @@ ipcMain.on('login-attempt', async (event, credentials) => {
     try {
         // Substitua pela URL real da sua API de autenticação
         const route = apiUrl + 'login';
-        
+
         const request = net.request({
             method: 'POST',
             url: route,
@@ -727,20 +727,20 @@ ipcMain.on('login-attempt', async (event, credentials) => {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         let responseData = '';
-        
+
         request.on('response', (response) => {
             response.on('data', (chunk) => {
                 responseData += chunk.toString();
                 console.log("Resposta da API:", responseData); // Adiciona este log para ver a resposta crua
             });
-            
+
             response.on('end', () => {
                 try {
                     const data = JSON.parse(responseData);
 
-                    
+
                     if (data.status === 'Authorized' && data.api_key) {
                         // Login bem-sucedido
                         loginWin.webContents.executeJavaScript(`
@@ -755,35 +755,35 @@ ipcMain.on('login-attempt', async (event, credentials) => {
 
                     } else {
                         // Login falhou
-                        event.reply('login-response', { 
-                            success: false, 
-                            message: data.message || 'Falha na autenticação' 
+                        event.reply('login-response', {
+                            success: false,
+                            message: data.message || 'Falha na autenticação'
                         });
                     }
                 } catch (error) {
                     console.log("Resposta da API:", error);
-                    event.reply('login-response', { 
-                        success: false, 
-                        message: 'Erro ao processar resposta do servidor' 
+                    event.reply('login-response', {
+                        success: false,
+                        message: 'Erro ao processar resposta do servidor'
                     });
                 }
             });
         });
-        
+
         request.on('error', (error) => {
-            event.reply('login-response', { 
-                success: false, 
-                message: `Erro de conexão: ${error.message}` 
+            event.reply('login-response', {
+                success: false,
+                message: `Erro de conexão: ${error.message}`
             });
         });
-        
+
         // Envia as credenciais
         request.write(JSON.stringify(credentials));
         request.end();
     } catch (error) {
-        event.reply('login-response', { 
-            success: false, 
-            message: `Erro: ${error.message}` 
+        event.reply('login-response', {
+            success: false,
+            message: `Erro: ${error.message}`
         });
     }
 });
@@ -805,9 +805,9 @@ ipcMain.on('select-operator', async (event, operator) => {
             createUpdateWindow();
         });
     } catch (error) {
-        event.reply('operator-response', { 
-            success: false, 
-            message: `Erro: ${error.message}` 
+        event.reply('operator-response', {
+            success: false,
+            message: `Erro: ${error.message}`
         });
     }
 });
@@ -817,15 +817,15 @@ ipcMain.handle('get-operators', async () => {
     try {
         // Verifica se existe token de autenticação
         const token = await getAuthToken();
-        
+
         if (!token) {
-            return { 
-                success: false, 
-                message: 'Não autenticado', 
-                operators: [] 
+            return {
+                success: false,
+                message: 'Não autenticado',
+                operators: []
             };
         }
-        
+
         // Aqui você pode fazer uma chamada à API para obter os operadores
         // Por enquanto, vamos retornar alguns operadores de exemplo
         // Substitua pela URL real da sua API de autenticação
@@ -866,7 +866,7 @@ ipcMain.handle('get-operators', async () => {
                                 operators: operators
                             });
                         } else {
-                                reject({
+                            reject({
                                 success: false,
                                 message: data.message || 'Erro ao obter a lista de colaboradores',
                                 operators: []
@@ -874,7 +874,7 @@ ipcMain.handle('get-operators', async () => {
                         }
                     } catch (error) {
                         console.log("Erro ao processar resposta da API:", error);
-                            reject({
+                        reject({
                             success: false,
                             message: 'Erro ao processar resposta do servidor',
                             operators: []
@@ -895,10 +895,10 @@ ipcMain.handle('get-operators', async () => {
         });
     } catch (error) {
         console.error('Erro ao obter operadores:', error);
-        return { 
-            success: false, 
-            message: `Erro: ${error.message}`, 
-            operators: [] 
+        return {
+            success: false,
+            message: `Erro: ${error.message}`,
+            operators: []
         };
     }
 });
@@ -927,7 +927,7 @@ ipcMain.on('token-exists', async () => {
 });
 
 
-ipcMain.on('sair', ()=>{
+ipcMain.on('sair', () => {
     let exec = `
             localStorage.removeItem("idOperator");
             localStorage.removeItem("selectedOperator");
@@ -953,7 +953,7 @@ ipcMain.on('sair', ()=>{
             }
         }
     });
-    
+
 });
 
 

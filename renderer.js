@@ -18,11 +18,11 @@ let selectedItemName = '';
 
 window.electronAPI.onLoadData((data) => {
     nextButton.disabled = true;
-    if(!data){
+    if (!data) {
         return;
     }
     // Reseta a view para a lista sempre que os dados são carregados
-    populateList(data[0]); 
+    populateList(data[0]);
 });
 
 async function initializePusher() {
@@ -44,11 +44,11 @@ async function initializePusher() {
 
         var pusher = new Pusher(PUSHER_APP_KEY, {
             wsHost: host,
-            wsPort: 6001,
-            wssPort: 6001,
-            forceTLS: false,
+            wsPort: 80,
+            wssPort: 443,
+            forceTLS: true,
             enableStats: false,
-            enabledTransports: ['ws','wss'],
+            enabledTransports: ['wss', 'ws'],
             cluster: 'mt1'
         });
 
@@ -56,20 +56,20 @@ async function initializePusher() {
         if (pusher.connection.state === 'connected') {
             pusher.unsubscribe('chat.' + channelLocal + '_' + colabId);
         }
-        
+
         channel = pusher.subscribe('chat.' + channelLocal + '_' + colabId);
 
-        channel.bind('message-sent', function(r) {
+        channel.bind('message-sent', function (r) {
             let data = r.data.fila.original;
             let count = data.length;
-                console.log(data);
-                localStorage.setItem('proximos',JSON.stringify(data));
+            console.log(data);
+            localStorage.setItem('proximos', JSON.stringify(data));
 
             populateList(r.data.currentData.original);
 
         });
 
-        pusher.connection.bind('error', function(err) {
+        pusher.connection.bind('error', function (err) {
             console.error('Pusher connection error: ', err);
         });
 
@@ -82,9 +82,9 @@ async function initializePusher() {
 initializePusher();
 
 //chama o proximo da fila ao abrir a janela de atendimentos
-window.electronAPI.selectAtendID((data)=>{
+window.electronAPI.selectAtendID((data) => {
     nextButton.disabled = true;
-    if(!data){
+    if (!data) {
         queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
         return;
     }
@@ -97,7 +97,7 @@ window.electronAPI.selectAtendID((data)=>{
     selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
 });
 
-window.electronAPI.showObservation(()=>{
+window.electronAPI.showObservation(() => {
     window.electronAPI.iniciaAtendimento(selectedItemId);
     showObservationView(); // Muda para a tela de observação
 });
@@ -110,9 +110,9 @@ function populateList(currentData) {
     const proximos = JSON.parse(datastorage);
     itemList.innerHTML = '';
 
-    setTimeout(()=>{
+    setTimeout(() => {
         nextButton.disabled = !currentData;
-    },5000);
+    }, 5000);
 
     // Seleciona o primeiro item por padrão (ou o próximo disponível)
     // Aqui, vamos apenas pegar o primeiro da lista atual
@@ -172,7 +172,7 @@ nextButton.addEventListener('click', () => {
 
 
 
-logoutButton.addEventListener('click',()=>{
+logoutButton.addEventListener('click', () => {
     window.electronAPI.logoutApp();
 });
 
