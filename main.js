@@ -26,6 +26,14 @@ autoUpdater.autoInstallOnAppQuit = true;
 //impede que o app seja executado mais de uma vez
 const gotTheLock = app.requestSingleInstanceLock();
 
+// Função para configurar inicialização automática
+function setAutoLaunch(start) {
+  app.setLoginItemSettings({
+    openAtLogin: start,
+    path: app.getPath('exe'), // Aponta para o executável do seu app
+  });
+}
+
 // Função modificada para buscar dados da API
 async function readData() {
     try {
@@ -343,6 +351,9 @@ if (!gotTheLock) {
 
     // Inicialização do aplicativo modificada para verificar autenticação
     app.whenReady().then(async () => {
+
+        //define a inicialização automatica do aplicativo ao entrar no windows
+        setAutoLaunch(true);
 
         // Verifica se o usuário já está autenticado
         const token = await getAuthToken();
