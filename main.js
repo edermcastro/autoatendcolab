@@ -13,12 +13,47 @@ let operatorWin;
 let updateWin;
 
 const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (backup local)
+const settingsPath = path.join(app.getPath('userData'), 'settings.json'); // Caminho para as configurações
 const apiUrl = 'https://autoatend.linco.work/api/v1/';
-// const apiUrl = 'http://_lara10-autoatend.devel/api/v1/';
 
+//? Função para ler as configurações
+function getSettings() {
+    try {
+        if (fs.existsSync(settingsPath)) {
+            const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+            return JSON.parse(settingsData);
+        }
+    } catch (error) {
+        console.error('Erro ao ler arquivo de configurações:', error);
+    }
+    return {}; // Retorna objeto vazio se o arquivo não existir ou houver erro
+}
+
+//? Função para salvar as configurações
+function saveSettings(settings) {
+    try {
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    } catch (error) {
+        console.error('Erro ao salvar arquivo de configurações:', error);
+    }
+}
+
+ipcMain.handle('get-setting', (event, key) => {
+    const settings = getSettings();
+    return settings[key];
+});
+
+ipcMain.on('set-setting', (event, key, value) => {
+    const settings = getSettings();
+    settings[key] = value;
+    saveSettings(settings);
+    app.relaunch();
+    app.exit();
+});
+//! final de configurações
+
+//!pusher 
 const pusherUrl = 'aa.linco.work';
-// const pusherUrl = 'localhost';
-
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -352,7 +387,9 @@ if (!gotTheLock) {
     app.whenReady().then(async () => {
 
         //define a inicialização automatica do aplicativo ao entrar no windows
-        setAutoLaunch(true);
+        const settings = getSettings();
+        const enableAutoStart = settings.autostart === undefined ? true : settings.autostart;
+        setAutoLaunch(enableAutoStart);
 
         // Verifica se o usuário já está autenticado
         const token = await getAuthToken();

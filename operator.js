@@ -3,9 +3,17 @@ const selectButton = document.getElementById('select-button');
 const errorMessage = document.getElementById('error-message');
 const quitButton = document.getElementById('sair-button');
 const verionSpan = document.getElementById('version');
+const autoStartSwitch = document.getElementById('active-switch');
 
 // Carrega a lista de operadores ao iniciar
 window.addEventListener('DOMContentLoaded', async () => {
+    //... (código existente)
+
+    // Carrega o estado do autostart
+    const autostart = await window.electronAPI.getSetting('autostart');
+    autoStartSwitch.checked = autostart === undefined ? true : autostart;
+
+
     try {
         const response = await window.electronAPI.getOperators();
 
@@ -88,7 +96,10 @@ window.electronAPI.onOperatorResponse((response) => {
     // Se for bem-sucedido, o processo principal fechará esta janela
 });
 
-
+autoStartSwitch.addEventListener('change', () => {
+    const isEnabled = autoStartSwitch.checked;
+    window.electronAPI.setSetting('autostart', isEnabled);
+});
 
 quitButton.addEventListener('click',()=>{
     window.electronAPI.quitApp();
