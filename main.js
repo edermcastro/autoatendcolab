@@ -201,6 +201,7 @@ function createOperatorWindow() {
     });
 
     // operatorWin.webContents.openDevTools();
+    operatorWin.webContents.executeJavaScript('localStorage.setItem("version","' + app.getVersion() + '")');
 
     operatorWin.loadFile('operator.html');
 
@@ -263,8 +264,6 @@ function createFloatingWindow() {
 
 
     floatingWin.loadFile('floating.html');
-
-    floatingWin.webContents.executeJavaScript('localStorage.setItem("version","' + app.getVersion() + '")');
 
     // Envia a contagem inicial para a janela flutuante
     const data = readData();

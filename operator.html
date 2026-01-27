@@ -19,6 +19,14 @@
                 <option value="">Selecione um operador</option>
                 <!-- Operadores serão carregados aqui -->
             </select>
+            &nbsp;
+            <p>
+                Iniciar automaticamente com o sistema
+            </p>
+            <label class="switch">
+                <input type="checkbox" id="active-switch" checked>
+                <span class="slider round"></span>
+            </label>
         </div>
         
         <button id="select-button" disabled>Continuar</button>
@@ -29,11 +37,11 @@
     <script>
         $(function(){
             let opse = localStorage.getItem('selectedOperator');
-            let vs = localStorage.getItem('version');
             setTimeout(()=>{
+                let vs = localStorage.getItem('version');
                 $('span.op').text(opse);
                 $('#version').text(vs);
-            },2000);
+            },1000);
         });
     </script>
 </body>
