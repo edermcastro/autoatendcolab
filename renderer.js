@@ -25,61 +25,47 @@ window.electronAPI.onLoadData((data) => {
     populateList(data[0]);
 });
 
-async function initializePusher() {
+async function initializeSocket() {
     if (typeof window.electronAPI === 'undefined' || !window.electronAPI.getPusherConfig) {
         console.error('electronAPI not available or getPusherConfig method missing.');
         return;
     }
 
-    const pusherConfig = await window.electronAPI.getPusherConfig();
-    const PUSHER_APP_KEY = pusherConfig.appKey;
-    let host = pusherConfig.host;
+    const config = await window.electronAPI.getPusherConfig();
+    let host = config.host;
 
-    const channelLocal = localStorage.getItem('channel');
-    const colabId = localStorage.getItem('idOperator');
+    const tenantId = localStorage.getItem('tenantId');
+    const token = localStorage.getItem('authToken');
 
-    //! checa se ja tem o colabId
-    if (channelLocal && colabId && PUSHER_APP_KEY) {
-        Pusher.logToConsole = true;
-
-        var pusher = new Pusher(PUSHER_APP_KEY, {
-            wsHost: host,
-            wsPort: 80,
-            wssPort: 443,
-            forceTLS: true,
-            enableStats: false,
-            enabledTransports: ['wss', 'ws'],
-            cluster: 'mt1'
+    //! checa se ja tem o colabId e o tenantId
+    if (tenantId && token) {
+        // Conexão Socket.io adaptada do Pusher
+        const socket = io(host, {
+            auth: { token },
+            extraHeaders: { 'x-tenant-id': tenantId }
         });
 
-        let channel;
-        if (pusher.connection.state === 'connected') {
-            pusher.unsubscribe('chat.' + channelLocal + '_' + colabId);
-        }
+        socket.on('connect', () => {
+            console.log('Socket.io conectado ao host: ', host);
+        });
 
-        channel = pusher.subscribe('chat.' + channelLocal + '_' + colabId);
-
-        channel.bind('message-sent', function (r) {
-            let data = r.data.fila.original;
-            let count = data.length;
-            console.log(data);
+        // Evento que substitui o bind do Pusher
+        socket.on('queueUpdate', (data) => {
+            console.log('Atualização de fila recebida:', data);
             localStorage.setItem('proximos', JSON.stringify(data));
-
-            populateList(r.data.currentData.original);
-
+            populateList(data);
         });
 
-        pusher.connection.bind('error', function (err) {
-            console.error('Pusher connection error: ', err);
+        socket.on('error', (err) => {
+            console.error('Socket.io connection error: ', err);
         });
 
-        console.log('Host de conexão: ', host);
     } else {
-        console.warn('User not authenticated or Pusher APP_KEY not available. Private channel not subscribed.');
+        console.warn('User not authenticated or tenantId not available. WebSocket not connected.');
     }
 }
 
-initializePusher();
+initializeSocket();
 
 //chama o proximo da fila ao abrir a janela de atendimentos
 window.electronAPI.selectAtendID((data) => {
@@ -93,12 +79,12 @@ window.electronAPI.selectAtendID((data) => {
     showListView();
 
     // Garante que o item selecionado (ID e Nome) seja o que veio da chamada, sobrescrevendo o da lista.
-    selectedItemId = data.id ?? null;
+    selectedItemId = data._id ?? null;
     selectedItemName = data.clientName ?? '';
 
     //data.senhaGen
-    queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>  -  ${data.descricaoServico.toUpperCase()}` : 'Ninguem aguardando atendimento';
-    selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.senhaGen} ]</i>` : 'Ninguem aguardando atendimento';
+    queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>` : 'Ninguem aguardando atendimento';
+    selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.ticketNumber} ]</i>` : 'Ninguem aguardando atendimento';
 });
 
 window.electronAPI.showObservation(() => {
@@ -107,7 +93,7 @@ window.electronAPI.showObservation(() => {
 });
 
 // Função para popular a lista de itens
-function populateList(currentData) {
+function populateList(proximos) {
     const atendimentoEmAndamentoId = localStorage.getItem('atendimentoAtual');
     const atendimentoEmAndamentoNome = localStorage.getItem('atendimentoAtualNome');
 
@@ -118,25 +104,27 @@ function populateList(currentData) {
         return;
     }
 
-    let datastorage = localStorage.getItem('proximos');
+    // Se não vier dados por parâmetro, tenta pegar do localStorage (fallback)
+    if (!Array.isArray(proximos)) {
+        let datastorage = localStorage.getItem('proximos');
+        proximos = JSON.parse(datastorage || '[]');
+    }
 
-    // Adiciona os outros itens apenas para visualização (opcional)
-    const proximos = JSON.parse(datastorage);
     itemList.innerHTML = '';
 
     setTimeout(() => {
-        nextButton.disabled = !currentData;
-    }, 5000);
+        nextButton.disabled = !proximos || proximos.length === 0;
+    }, 1000);
 
     // Seleciona o primeiro item por padrão (ou o próximo disponível)
     // Aqui, vamos apenas pegar o primeiro da lista atual
     const itemToProcess = proximos[0]; // Pega o primeiro item
     if (itemToProcess) {
-        selectedItemId = itemToProcess.id;
+        selectedItemId = itemToProcess._id;
         selectedItemName = itemToProcess.clientName;
         const li = document.createElement('li');
-        li.innerHTML = /*${itemToProcess.senhaGen}: */ `<u>${itemToProcess.clientName.toUpperCase()}</u> - ${itemToProcess.attendanceType.toUpperCase()} - ${itemToProcess.descricaoServico.toUpperCase()}`;
-        li.dataset.id = itemToProcess.id; // Armazena o ID no elemento
+        li.innerHTML = /*${itemToProcess.ticketNumber}: */ `<u>${itemToProcess.clientName.toUpperCase()}</u> - ${itemToProcess.ticketNumber}`;
+        li.dataset.id = itemToProcess._id; // Armazena o ID no elemento
         li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
         itemList.appendChild(li);
     } else {
@@ -149,8 +137,7 @@ function populateList(currentData) {
     // Adiciona os outros itens apenas para visualização (opcional)
     proximos.slice(1).forEach(item => {
         const li = document.createElement('li');
-        //${item.senhaGen}: 
-        li.textContent = `${item.clientName.toUpperCase()} - ${item.attendanceType.toUpperCase()} - ${item.descricaoServico.toUpperCase()}`;
+        li.textContent = `${item.clientName.toUpperCase()} - ${item.ticketNumber}`;
         itemList.appendChild(li);
     });
 }
@@ -223,5 +210,3 @@ saveButton.addEventListener('click', () => {
         window.location.reload();
     }
 });
-
-// Inicialmente, mostra a view da lista (estará vazia até receber dados)

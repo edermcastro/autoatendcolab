@@ -14,7 +14,14 @@ let updateWin;
 
 const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (backup local)
 const settingsPath = path.join(app.getPath('userData'), 'settings.json'); // Caminho para as configurações
-const apiUrl = 'https://autoatend.linco.work/api/v1/';
+
+//! API
+const apiUrl = 'http://localhost:3000/api/'; // Adaptado para NestJS
+//! pusher 
+const pusherUrl = 'http://localhost:3000'; // Agora aponta para o Socket.io (NestJS)
+
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 //? Função para ler as configurações
 function getSettings() {
@@ -52,21 +59,15 @@ ipcMain.on('set-setting', (event, key, value) => {
 });
 //! final de configurações
 
-//!pusher 
-const pusherUrl = 'aa.linco.work';
-
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
-
 //impede que o app seja executado mais de uma vez
 const gotTheLock = app.requestSingleInstanceLock();
 
 // Função para configurar inicialização automática
 function setAutoLaunch(start) {
-  app.setLoginItemSettings({
-    openAtLogin: start,
-    path: app.getPath('exe'), // Aponta para o executável do seu app
-  });
+    app.setLoginItemSettings({
+        openAtLogin: start,
+        path: app.getPath('exe'), // Aponta para o executável do seu app
+    });
 }
 
 // Função modificada para buscar dados da API
@@ -112,7 +113,8 @@ async function getFirstData() {
 
     const token = await getAuthToken();
     const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-    const url = apiUrl + 'get-proximos/' + colabId;
+    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const url = apiUrl + 'attendance/next-in-line/' + colabId;
 
     //!  checa se o token e o colabId existem
     if (!token && !colabId) { console.warn("Token or colabId not found in localStorage. API requests will not be made."); return; }
@@ -123,7 +125,8 @@ async function getFirstData() {
         url: url,
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            'x-tenant-id': tenantId
         }
     });
 
@@ -134,7 +137,7 @@ async function getFirstData() {
         response.on('end', () => {
             try {
                 const parsedData = JSON.parse(rawData);
-                let proximos = parsedData;
+                let proximos = Array.isArray(parsedData) ? parsedData : [];
                 if (response.statusCode === 200) {
                     floatingWin.webContents.executeJavaScript("localStorage.setItem('proximos','" + JSON.stringify(proximos) + "')");
                     let count = proximos.length;
@@ -162,7 +165,8 @@ async function getFirstData() {
 // Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
 async function getDataAndUpdateFloatingBtn() {
 
-    const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
+    const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
+    const proximos = JSON.parse(stored || '[]');
     let count = proximos.length;
 
     //lista a contagem no botão flutuante
@@ -446,11 +450,11 @@ async function getSelectedOperator() {
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else if (mainWin && !mainWin.isDestroyed()) {
-            mainWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
+            mainWin.webContents.executeJavaScript('localStorage.getItem("authToken");')
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else if (floatingWin && !floatingWin.isDestroyed()) {
-            floatingWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
+            floatingWin.webContents.executeJavaScript('localStorage.getItem("authToken");')
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else {
@@ -477,9 +481,8 @@ async function getSelectedOperatorId() {
 
 ipcMain.handle('get-pusher-config', async () => {
     // Obtenha sua chave e host de forma segura aqui (ambiente, .env, etc.)
-    const PUSHER_APP_KEY = process.env.PUSHER_APP_KEY || '1feb970af7708cb';
     const PUSHER_HOST = process.env.PUSHER_HOST || pusherUrl;
-    return { appKey: PUSHER_APP_KEY, host: PUSHER_HOST };
+    return { host: PUSHER_HOST };
 });
 
 ipcMain.on('update_version', async (event, arg) => {
@@ -538,25 +541,25 @@ ipcMain.on('chamar-fila', async () => {
 
     // Se não houver atendimento em andamento, continua com a lógica original.
     const countFila = async () => {
-        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
+        const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
+        const proximos = JSON.parse(stored || '[]');
         return proximos.length;
     }
 
     const requestData = async () => {
 
-
-
-
         const colabId = await getSelectedOperatorId();
-        const token = await getAuthToken('token');
-        const url = apiUrl + 'chama-fila-app-colab/' + colabId; // URL de exemplo para enviar a solicitação
+        const token = await getAuthToken();
+        const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+        const url = apiUrl + 'attendance/call-next/' + colabId;
 
         const request = net.request({
-            method: 'GET',
+            method: 'POST',
             url: url,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
+                'Authorization': 'Bearer ' + token,
+                'x-tenant-id': tenantId
             }
         });
 
@@ -570,31 +573,33 @@ ipcMain.on('chamar-fila', async () => {
             response.on('end', () => {
                 try {
                     const parsedData = JSON.parse(rawData);
-                    if (response.statusCode === 200) {
-                        mainWin.webContents.send('select-atend-id', parsedData.data);
-                        if (parsedData.data && (parsedData.data.Status === 'Fila' || parsedData.data.Status === 'Chamado')) { showMainWindow(); } else
-                            if (parsedData.data && parsedData.data.Status === 'Atendendo') {
-                                let options2 = {
-                                    'title': 'Precisa finalizar antes de chamar o próximo.',
-                                    'message': 'Em andamento',
-                                    'detail': 'Já possui um atendimento em andamento (Atendendo: ' + parsedData.data.clientName + '), continue e finalize por favor!',
-                                    'type': 'error',
-                                    'noLink': true,
-                                    'buttons': ['Depois', 'Continuar'],
-                                };
-                                dialog.showMessageBox(floatingWin, options2).then(result => {
-                                    if (result.response) {
-                                        mainWin.webContents.send('show-observation');
-                                        showMainWindow();
-                                    } else {
-                                        mainWin.hide();
+                    if (response.statusCode === 201 || response.statusCode === 200) {
+                        if (parsedData) {
+                            mainWin.webContents.send('select-atend-id', parsedData);
+                            if (parsedData.status === 'Fila' || parsedData.status === 'Chamado') { showMainWindow(); } else
+                                if (parsedData.status === 'Atendendo') {
+                                    let options2 = {
+                                        'title': 'Precisa finalizar antes de chamar o próximo.',
+                                        'message': 'Em andamento',
+                                        'detail': 'Já possui um atendimento em andamento (Atendendo: ' + parsedData.clientName + '), continue e finalize por favor!',
+                                        'type': 'error',
+                                        'noLink': true,
+                                        'buttons': ['Depois', 'Continuar'],
                                     };
-                                });
-                            }
-                        // console.log(parsedData);
+                                    dialog.showMessageBox(floatingWin, options2).then(result => {
+                                        if (result.response) {
+                                            mainWin.webContents.send('show-observation');
+                                            showMainWindow();
+                                        } else {
+                                            mainWin.hide();
+                                        };
+                                    });
+                                }
+                        } else {
+                            mainWin.webContents.send('select-atend-id', null);
+                        }
                     } else {
                         console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
-                        // Lidar com o erro adequadamente, talvez enviando uma mensagem para a janela principal
                         mainWin.webContents.send('api-error', {
                             message: `Erro ao chamar atendimento: ${parsedData.message || 'Erro desconhecido'}`
                         });
@@ -644,7 +649,8 @@ ipcMain.on('chamar-fila', async () => {
 // Ouve um pedido da janela flutuante para forçar a atualização da contagem
 ipcMain.on('refresh-count', async () => {
     if (floatingWin) {
-        const proximos = JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')")) ?? [];
+        const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
+        const proximos = JSON.parse(stored || '[]');
         floatingWin.webContents.send('update-count', proximos.length);
     }
 });
@@ -658,44 +664,33 @@ ipcMain.on('select-atend-id', (itemId) => {
 ipcMain.on('iniciar-atendimento', async (event, itemId) => {
 
     const token = await getAuthToken();
-    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-    //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
-
-    const url = apiUrl + 'iniciar-atendimento/' + itemId; // URL para enviar a solicitação
+    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const url = apiUrl + 'attendance/' + itemId + '/start';
 
     // envio de uma solicitação POST com o ID do item
     const request = net.request({
-        method: 'GET',
+        method: 'PATCH',
         url: url,
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            'x-tenant-id': tenantId
         }
     });
 
     request.on('response', (response) => {
-        // console.log(`STATUS: ${response.statusCode}`);
-        // console.log(`HEADERS: ${JSON.stringify(response.headers)}`);
         response.on('data', (chunk) => {
             console.log(`BODY: ${chunk}`);
         });
         response.on('end', () => {
             console.log('Solicitação concluída.');
-            // Avisa a janela principal que a solicitação foi feita (opcional)
-            // mainWin.webContents.send('request-done', itemId);
         });
     });
     request.on('error', (error) => {
         console.error(`Erro na solicitação: ${error}`);
-        // Poderia notificar a UI sobre o erro
     });
 
-    // Envia o ID como corpo da requisição (exemplo)
-    request.write(JSON.stringify({ id: itemId }));
     request.end();
-
-    // Não precisamos esperar a resposta para mudar a UI na janela principal
-    // A janela principal já mudou a UI ao enviar o evento 'next-step'
 });
 
 // Ouve quando um atendimento é iniciado e notifica a janela flutuante
@@ -715,19 +710,14 @@ ipcMain.on('atendimento-finalizado', () => {
 // Ouvir clique no botão "Salvar"
 ipcMain.on('save-observation', async (event, { itemId, observation }) => {
 
-    //TODO salva a observação e finaliza o atendimento
-
     console.log(`Salvando observação para item ${itemId}: ${observation}`);
 
     const token = await getAuthToken();
-    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-    //TODO inicia o atendimento o id do atendimento deve ser requisitado do backend
-
-    const url = apiUrl + 'finalizar-atendimento/' + itemId; // URL de exemplo para enviar a solicitação
+    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const url = apiUrl + 'attendance/' + itemId + '/finish';
 
     const fmData = JSON.stringify({
-        "colabId": colabId,
-        "obsAtendimento": observation
+        "observation": observation
     });
 
 
@@ -737,7 +727,8 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
         url: url,
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
+            'Authorization': 'Bearer ' + token,
+            'x-tenant-id': tenantId
         }
     });
 
@@ -747,13 +738,10 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
         });
         response.on('end', () => {
             console.log('Solicitação concluída.');
-            // Avisa a janela principal que a solicitação foi feita (opcional)
-            // mainWin.webContents.send('request-done', itemId);
         });
     });
     request.on('error', (error) => {
         console.error(`Erro na solicitação: ${error}`);
-        // Poderia notificar a UI sobre o erro
     });
 
     // Envia o ID como corpo da requisição (exemplo)
@@ -763,21 +751,9 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
 
     // Opcional: Fechar ou resetar a janela principal após salvar
     if (mainWin) {
-        mainWin.hide(); // Ou mainWin.webContents.send('reset-view');
+        mainWin.hide();
     }
 });
-
-// Permite que a janela flutuante seja arrastada
-// REMOVA ou comente este listener inteiro:
-/*
-ipcMain.on('drag-float-window', (event, { offsetX, offsetY }) => {
-    if (floatingWin) {
-        const { x, y } = screen.getCursorScreenPoint();
-        floatingWin.setPosition(x - offsetX, y - offsetY);
-    }
-});
-*/
-
 
 ipcMain.on('logout', () => {
     mainWin.webContents.executeJavaScript(`
@@ -785,6 +761,7 @@ ipcMain.on('logout', () => {
             localStorage.removeItem("selectedOperator");
             localStorage.removeItem("salaOperator");
             localStorage.removeItem("servicosOperator");
+            localStorage.removeItem("tenantId");
         `).then(() => {
         // Fecha a janela main e abre a janela de operador e inicia o aplicativo
         mainWin.hide();
@@ -797,8 +774,7 @@ ipcMain.on('logout', () => {
 // Handler para login
 ipcMain.on('login-attempt', async (event, credentials) => {
     try {
-        // Substitua pela URL real da sua API de autenticação
-        const route = apiUrl + 'login';
+        const route = apiUrl + 'auth/login';
 
         const request = net.request({
             method: 'POST',
@@ -813,19 +789,17 @@ ipcMain.on('login-attempt', async (event, credentials) => {
         request.on('response', (response) => {
             response.on('data', (chunk) => {
                 responseData += chunk.toString();
-                console.log("Resposta da API:", responseData); // Adiciona este log para ver a resposta crua
             });
 
             response.on('end', () => {
                 try {
                     const data = JSON.parse(responseData);
 
-
-                    if (data.status === 'Authorized' && data.api_key) {
+                    if (data.access_token) {
                         // Login bem-sucedido
                         loginWin.webContents.executeJavaScript(`
-                            localStorage.setItem("authToken", "${data.api_key}");
-                            localStorage.setItem("channel", "${data.channel}");
+                            localStorage.setItem("authToken", "${data.access_token}");
+                            localStorage.setItem("tenantId", "${data.user.tenantId}");
                         `).then(() => {
                             // Fecha a janela de login e abre a de seleção de operador
                             event.reply('login-response', { success: true });
@@ -841,7 +815,6 @@ ipcMain.on('login-attempt', async (event, credentials) => {
                         });
                     }
                 } catch (error) {
-                    console.log("Resposta da API:", error);
                     event.reply('login-response', {
                         success: false,
                         message: 'Erro ao processar resposta do servidor'
@@ -858,7 +831,7 @@ ipcMain.on('login-attempt', async (event, credentials) => {
         });
 
         // Envia as credenciais
-        request.write(JSON.stringify(credentials));
+        request.write(JSON.stringify({ login: credentials.login, password: credentials.password }));
         request.end();
     } catch (error) {
         event.reply('login-response', {
@@ -906,10 +879,7 @@ ipcMain.handle('get-operators', async () => {
             };
         }
 
-        // Aqui você pode fazer uma chamada à API para obter os operadores
-        // Por enquanto, vamos retornar alguns operadores de exemplo
-        // Substitua pela URL real da sua API de autenticação
-        const route = apiUrl + 'colabs/list';
+        const route = apiUrl + 'collaborators';
 
         return new Promise((resolve, reject) => {
             const request = net.request({
@@ -926,19 +896,18 @@ ipcMain.handle('get-operators', async () => {
             request.on('response', (response) => {
                 response.on('data', (chunk) => {
                     responseData += chunk.toString();
-                    console.log("Resposta da API:", responseData); // Adiciona este log para ver a resposta crua
                 });
 
                 response.on('end', () => {
                     try {
                         const data = JSON.parse(responseData);
 
-                        if (data.colabs) {
-                            const operators = data.colabs.map(colab => ({
-                                id: colab.id,
-                                name: colab.nome.toUpperCase(),
-                                sala: colab.sala,
-                                servicos: colab.servicos
+                        if (Array.isArray(data)) {
+                            const operators = data.map(colab => ({
+                                id: colab._id,
+                                name: colab.name.toUpperCase(),
+                                sala: colab.roomId?.name || 'Sala',
+                                servicos: colab.serviceIds?.map(s => s.name).join(',') || ''
                             }));
 
                             resolve({
@@ -948,12 +917,11 @@ ipcMain.handle('get-operators', async () => {
                         } else {
                             reject({
                                 success: false,
-                                message: data.message || 'Erro ao obter a lista de colaboradores',
+                                message: 'Erro ao obter a lista de colaboradores',
                                 operators: []
                             });
                         }
                     } catch (error) {
-                        console.log("Erro ao processar resposta da API:", error);
                         reject({
                             success: false,
                             message: 'Erro ao processar resposta do servidor',

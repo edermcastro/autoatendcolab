@@ -40,7 +40,8 @@
     "@electron/remote": "^2.1.2",
     "electron-single-instance": "^0.0.2",
     "electron-updater": "^6.6.2",
-    "jquery": "^3.7.1"
+    "jquery": "^3.7.1",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "electron": "^35.2.1",
