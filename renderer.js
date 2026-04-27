@@ -17,12 +17,15 @@ let selectedItemId = null;
 let selectedItemName = '';
 
 window.electronAPI.onLoadData((data) => {
+    // Se já estiver em atendimento, ignora atualizações da lista para evitar flickering no botão
+    if (localStorage.getItem('atendimentoAtual')) {
+        return;
+    }
     nextButton.disabled = true;
     if (!data) {
         return;
     }
-    // Reseta a view para a lista sempre que os dados são carregados
-    populateList(data[0]);
+    populateList(data);
 });
 
 async function initializeSocket() {
@@ -51,9 +54,10 @@ async function initializeSocket() {
 
         // Evento que substitui o bind do Pusher
         socket.on('queueUpdate', (data) => {
-            console.log('Atualização de fila recebida:', data);
-            localStorage.setItem('proximos', JSON.stringify(data));
-            populateList(data);
+            console.log('Notificação de fila recebida:', data);
+            // Avisa o processo principal que houve mudança. 
+            // O main vai buscar a lista completa e atualizar todas as janelas.
+            window.electronAPI.updateQueue();
         });
 
         socket.on('error', (err) => {
@@ -182,6 +186,7 @@ nextButton.addEventListener('click', () => {
         localStorage.setItem('atendimentoAtualNome', selectedItemName);
 
         // Notifica o main process e muda a view
+        // IMPORTANTE: iniciaAtendimento deve apenas mudar o status na API, não chamar o próximo.
         window.electronAPI.atendimentoIniciado(selectedItemId);
         window.electronAPI.iniciaAtendimento(selectedItemId);
         showObservationView(); // Muda para a tela de observação

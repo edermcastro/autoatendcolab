@@ -100,7 +100,7 @@ async function fetchDataFromAPI() {
     //! as outras é o websockt que solicita a chamada  de requisições em busca de alterações
     const updData = setInterval(() => {
         getDataAndUpdateFloatingBtn();
-    }, 3000);
+    }, 30000);
 
     const updVersion = setTimeout(() => {
         if (pjson.isBuildNow) {
@@ -110,68 +110,80 @@ async function fetchDataFromAPI() {
 }
 
 async function getFirstData() {
-
     const token = await getAuthToken();
-    const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
+    const colabId = await getSelectedOperatorId();
     const tenantId = await getTenantId();
     const url = apiUrl + 'attendance/next-in-line/' + colabId;
 
-    //!  checa se o token e o colabId existem
-    if (!token && !colabId) { console.warn("Token or colabId not found in localStorage. API requests will not be made."); return; }
+    if (!token || !colabId) {
+        console.warn("Token or colabId not found. Skipping API request.");
+        return [];
+    }
 
-    //!  faz o request
-    const request = net.request({
-        method: 'GET',
-        url: url,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token,
-            'x-tenant-id': tenantId
-        }
-    });
-
-    //! busca pela resposta
-    request.on('response', (response) => {
-        let rawData = '';
-        response.on('data', (chunk) => { rawData += chunk; });
-        response.on('end', () => {
-            try {
-                const parsedData = JSON.parse(rawData);
-                let proximos = Array.isArray(parsedData) ? parsedData : [];
-                if (response.statusCode === 200) {
-                    floatingWin.webContents.executeJavaScript("localStorage.setItem('proximos','" + JSON.stringify(proximos) + "')");
-                    let count = proximos.length;
-                    floatingWin.webContents.send('update-count', count);
-                } else {
-                    console.error(`Erro na requisição: Status code ${response.statusCode}`, parsedData);
-                }
-            } catch (error) {
-                console.error("Erro ao analisar a resposta JSON:", error);
-                mainWin.webContents.send('api-error', {
-                    message: `Erro ao processar resposta do servidor.`
-                });
+    return new Promise((resolve) => {
+        const request = net.request({
+            method: 'GET',
+            url: url,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+                'x-tenant-id': tenantId
             }
         });
-    });
-    request.on('error', (error) => {
-        console.error("Erro na requisição:", error);
-    });
 
-    request.end();
+        request.on('response', (response) => {
+            let rawData = '';
+            response.on('data', (chunk) => { rawData += chunk; });
+            response.on('end', async () => {
+                try {
+                    const parsedData = JSON.parse(rawData);
+                    let proximos = Array.isArray(parsedData) ? parsedData : [];
+                    
+                    if (response.statusCode === 200) {
+                        const proximosStr = JSON.stringify(proximos);
+                        
+                        // Sincroniza o localStorage de todas as janelas importantes
+                        const updateStorageScript = `localStorage.setItem('proximos', ${JSON.stringify(proximosStr)})`;
+                        
+                        if (floatingWin && !floatingWin.isDestroyed()) {
+                            floatingWin.webContents.executeJavaScript(updateStorageScript);
+                            floatingWin.webContents.send('update-count', proximos.length);
+                        }
+                        
+                        // SÓ atualiza a janela principal se NÃO houver atendimento em andamento
+                        floatingWin.webContents.executeJavaScript("localStorage.getItem('atendimentoAtual')").then(atendimentoAtualId => {
+                            if (!atendimentoAtualId && mainWin && !mainWin.isDestroyed()) {
+                                mainWin.webContents.executeJavaScript(updateStorageScript);
+                                mainWin.webContents.send('load-data', proximos);
+                            }
+                            resolve(proximos);
+                        }).catch(err => {
+                            console.error("Erro ao verificar atendimento atual:", err);
+                            resolve(proximos);
+                        });
+                    } else {
+                        console.error(`Erro API: ${response.statusCode}`);
+                        resolve([]);
+                    }
+                } catch (error) {
+                    console.error("Erro JSON:", error);
+                    resolve([]);
+                }
+            });
+        });
 
-    return JSON.parse(await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')"));
+        request.on('error', (error) => {
+            console.error("Erro rede:", error);
+            resolve([]);
+        });
+
+        request.end();
+    });
 }
 
-// Função para coletar a lista de atendimentos do servidor, vai ser chamada uma vez e a cada 30s
+// Atualiza a função de monitoramento para realmente buscar dados a cada 30s (ou o que desejar)
 async function getDataAndUpdateFloatingBtn() {
-
-    const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
-    const proximos = JSON.parse(stored || '[]');
-    let count = proximos.length;
-
-    //lista a contagem no botão flutuante
-    floatingWin.webContents.send('update-count', count);
-
+    await getFirstData();
 }
 
 // Função para verificar se o token existe no localStorage
@@ -503,9 +515,12 @@ async function getSelectedOperatorId() {
 }
 
 ipcMain.handle('get-pusher-config', async () => {
-    // Obtenha sua chave e host de forma segura aqui (ambiente, .env, etc.)
-    const PUSHER_HOST = process.env.PUSHER_HOST || pusherUrl;
-    return { host: PUSHER_HOST };
+    // Garante que o host não termine com barra para o Socket.io
+    let host = pusherUrl;
+    if (host && host.endsWith('/')) {
+        host = host.slice(0, -1); 
+    }
+    return { host: host };
 });
 
 ipcMain.on('update_version', async (event, arg) => {
@@ -532,8 +547,13 @@ ipcMain.handle('get-count', async () => {
     return data.length;
 });
 
+let isCallingNext = false;
+
 // Ouvir pedido para mostrar a janela principal
 ipcMain.on('chamar-fila', async () => {
+    // Evita múltiplas chamadas simultâneas
+    if (isCallingNext) return;
+    isCallingNext = true;
 
     // Primeiro, verifica se já existe um atendimento em andamento
     const atendimentoAtualId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('atendimentoAtual')");
@@ -556,21 +576,13 @@ ipcMain.on('chamar-fila', async () => {
     }
 
     // Se um atendimento já estiver em andamento, apenas mostra a janela principal.
-    // A lógica em renderer.js cuidará de exibir a tela de observação.
     if (atendimentoAtualId) {
         showMainWindow();
-        return; // Interrompe a execução aqui
-    }
-
-    // Se não houver atendimento em andamento, continua com a lógica original.
-    const countFila = async () => {
-        const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
-        const proximos = JSON.parse(stored || '[]');
-        return proximos.length;
+        isCallingNext = false;
+        return;
     }
 
     const requestData = async () => {
-
         const colabId = await getSelectedOperatorId();
         const token = await getAuthToken();
         const tenantId = await getTenantId();
@@ -588,36 +600,33 @@ ipcMain.on('chamar-fila', async () => {
 
         request.on('response', (response) => {
             let rawData = '';
-
-            response.on('data', (chunk) => {
-                rawData += chunk;
-            });
-
+            response.on('data', (chunk) => { rawData += chunk; });
             response.on('end', () => {
+                isCallingNext = false;
                 try {
                     const parsedData = JSON.parse(rawData);
                     if (response.statusCode === 201 || response.statusCode === 200) {
                         if (parsedData) {
                             mainWin.webContents.send('select-atend-id', parsedData);
-                            if (parsedData.status === 'Fila' || parsedData.status === 'Chamado') { showMainWindow(); } else
-                                if (parsedData.status === 'Atendendo') {
-                                    let options2 = {
-                                        'title': 'Precisa finalizar antes de chamar o próximo.',
-                                        'message': 'Em andamento',
-                                        'detail': 'Já possui um atendimento em andamento (Atendendo: ' + parsedData.clientName + '), continue e finalize por favor!',
-                                        'type': 'error',
-                                        'noLink': true,
-                                        'buttons': ['Depois', 'Continuar'],
+                            if (parsedData.status === 'Fila' || parsedData.status === 'Chamado') { 
+                                showMainWindow(); 
+                            } else if (parsedData.status === 'Atendendo') {
+                                let options2 = {
+                                    'title': 'Precisa finalizar antes de chamar o próximo.',
+                                    'message': 'Em andamento',
+                                    'detail': 'Já possui um atendimento em andamento (Atendendo: ' + parsedData.clientName + '), continue e finalize por favor!',
+                                    'type': 'error',
+                                    'buttons': ['Depois', 'Continuar'],
+                                };
+                                dialog.showMessageBox(floatingWin, options2).then(result => {
+                                    if (result.response) {
+                                        mainWin.webContents.send('show-observation');
+                                        showMainWindow();
+                                    } else {
+                                        mainWin.hide();
                                     };
-                                    dialog.showMessageBox(floatingWin, options2).then(result => {
-                                        if (result.response) {
-                                            mainWin.webContents.send('show-observation');
-                                            showMainWindow();
-                                        } else {
-                                            mainWin.hide();
-                                        };
-                                    });
-                                }
+                                });
+                            }
                         } else {
                             mainWin.webContents.send('select-atend-id', null);
                         }
@@ -637,6 +646,7 @@ ipcMain.on('chamar-fila', async () => {
         });
 
         request.on('error', (error) => {
+            isCallingNext = false;
             console.error("Erro na requisição:", error);
             mainWin.webContents.send('api-error', {
                 message: `Erro ao chamar atendimento: ${error.message}`
@@ -646,7 +656,11 @@ ipcMain.on('chamar-fila', async () => {
         request.end();
     };
 
-
+    const countFilaValue = async () => {
+        const stored = await floatingWin.webContents.executeJavaScript("localStorage.getItem('proximos')");
+        const proximos = JSON.parse(stored || '[]');
+        return proximos.length;
+    }
 
     let options = {
         'title': 'Incie o atendimento quando o cliente chegar na sala.',
@@ -656,17 +670,20 @@ ipcMain.on('chamar-fila', async () => {
         'buttons': ['Não', 'Sim'],
     };
 
-
-    if (await countFila()) {
+    const count = await countFilaValue();
+    if (count > 0) {
         dialog.showMessageBox(floatingWin, options).then(result => {
-            if (result.response) {
+            if (result.response === 1) { // 1 é 'Sim'
                 requestData();
-            };
+            } else {
+                isCallingNext = false;
+            }
         });
     } else {
-        requestData();
+        // Se a fila estiver vazia, apenas abre a janela principal para visualização
+        showMainWindow();
+        isCallingNext = false;
     }
-
 });
 
 // Ouve um pedido da janela flutuante para forçar a atualização da contagem
@@ -728,6 +745,13 @@ ipcMain.on('atendimento-finalizado', () => {
     if (floatingWin) {
         floatingWin.webContents.send('atendimento-status-changed', 'finalizado');
     }
+});
+
+// Ouve atualização da fila vinda do renderer (via socket)
+ipcMain.on('update-queue', (event, data) => {
+    // Sempre busca dados frescos da API quando o socket notifica mudança,
+    // pois o socket pode enviar apenas o objeto da mudança e não a lista completa.
+    getFirstData();
 });
 
 // Ouvir clique no botão "Salvar"

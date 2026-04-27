@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     atendimentoIniciado: (itemId) => ipcRenderer.send('atendimento-iniciado', itemId),
     atendimentoFinalizado: () => ipcRenderer.send('atendimento-finalizado'),
 
+    //notifica o main process sobre atualização na fila vinda do socket
+    updateQueue: (data) => ipcRenderer.send('update-queue', data),
+
     showObservation: (callback) => ipcRenderer.on('show-observation', (_event) => callback() ),
     //salva a observação do atendimento
     saveObservation: (data) => ipcRenderer.send('save-observation', data),
