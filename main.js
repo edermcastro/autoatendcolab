@@ -15,10 +15,10 @@ let updateWin;
 const dataPath = path.join(__dirname, 'data.json'); // Caminho para o JSON (backup local)
 const settingsPath = path.join(app.getPath('userData'), 'settings.json'); // Caminho para as configurações
 
-//! API
-const apiUrl = 'http://localhost:3000/api/'; // Adaptado para NestJS
+//! api
+const apiUrl = 'https://aapi.linco.work/';
 //! pusher 
-const pusherUrl = 'http://localhost:3000'; // Agora aponta para o Socket.io (NestJS)
+const pusherUrl = apiUrl;
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -113,7 +113,7 @@ async function getFirstData() {
 
     const token = await getAuthToken();
     const colabId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('idOperator')")
-    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const tenantId = await getTenantId();
     const url = apiUrl + 'attendance/next-in-line/' + colabId;
 
     //!  checa se o token e o colabId existem
@@ -197,6 +197,29 @@ async function getAuthToken() {
             resolve(null);
         }
     });
+}
+
+// Função para verificar o tenantId no localStorage
+async function getTenantId() {
+    const checkWindow = async (win) => {
+        if (win && !win.isDestroyed()) {
+            try {
+                const val = await win.webContents.executeJavaScript('localStorage.getItem("tenantId");');
+                return (val && val !== 'null' && val !== 'undefined') ? val : null;
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    };
+
+    // Prioridade para janelas visíveis
+    let id = await checkWindow(operatorWin);
+    if (!id) id = await checkWindow(mainWin);
+    if (!id) id = await checkWindow(floatingWin);
+    if (!id) id = await checkWindow(loginWin);
+
+    return id;
 }
 
 // Função para criar a janela de login
@@ -550,7 +573,7 @@ ipcMain.on('chamar-fila', async () => {
 
         const colabId = await getSelectedOperatorId();
         const token = await getAuthToken();
-        const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+        const tenantId = await getTenantId();
         const url = apiUrl + 'attendance/call-next/' + colabId;
 
         const request = net.request({
@@ -664,7 +687,7 @@ ipcMain.on('select-atend-id', (itemId) => {
 ipcMain.on('iniciar-atendimento', async (event, itemId) => {
 
     const token = await getAuthToken();
-    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const tenantId = await getTenantId();
     const url = apiUrl + 'attendance/' + itemId + '/start';
 
     // envio de uma solicitação POST com o ID do item
@@ -713,7 +736,7 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
     console.log(`Salvando observação para item ${itemId}: ${observation}`);
 
     const token = await getAuthToken();
-    const tenantId = await floatingWin.webContents.executeJavaScript("localStorage.getItem('tenantId')")
+    const tenantId = await getTenantId();
     const url = apiUrl + 'attendance/' + itemId + '/finish';
 
     const fmData = JSON.stringify({
@@ -761,7 +784,6 @@ ipcMain.on('logout', () => {
             localStorage.removeItem("selectedOperator");
             localStorage.removeItem("salaOperator");
             localStorage.removeItem("servicosOperator");
-            localStorage.removeItem("tenantId");
         `).then(() => {
         // Fecha a janela main e abre a janela de operador e inicia o aplicativo
         mainWin.hide();
@@ -796,10 +818,15 @@ ipcMain.on('login-attempt', async (event, credentials) => {
                     const data = JSON.parse(responseData);
 
                     if (data.access_token) {
+                        // Tenta encontrar o tenantId em diferentes locais possíveis da resposta
+                        const tenantId = data.tenantId || (data.user && data.user.tenantId) || (data.user && data.user.tenant_id);
+                        
+                        console.log(`Login bem-sucedido. Token presente. TenantId encontrado: ${tenantId}`);
+
                         // Login bem-sucedido
                         loginWin.webContents.executeJavaScript(`
                             localStorage.setItem("authToken", "${data.access_token}");
-                            localStorage.setItem("tenantId", "${data.user.tenantId}");
+                            localStorage.setItem("tenantId", "${tenantId || ''}");
                         `).then(() => {
                             // Fecha a janela de login e abre a de seleção de operador
                             event.reply('login-response', { success: true });
@@ -830,8 +857,11 @@ ipcMain.on('login-attempt', async (event, credentials) => {
             });
         });
 
+        // Remove máscara do login (CPF/CNPJ) antes de enviar para a API
+        const cleanLogin = credentials.login.replace(/[.\-\/]/g, '');
+
         // Envia as credenciais
-        request.write(JSON.stringify({ login: credentials.login, password: credentials.password }));
+        request.write(JSON.stringify({ login: cleanLogin, password: credentials.password }));
         request.end();
     } catch (error) {
         event.reply('login-response', {
@@ -870,6 +900,9 @@ ipcMain.handle('get-operators', async () => {
     try {
         // Verifica se existe token de autenticação
         const token = await getAuthToken();
+        const tenantId = await getTenantId();
+
+        console.log(`Buscando operadores - TenantId: ${tenantId}, Token presente: ${!!token}`);
 
         if (!token) {
             return {
@@ -881,26 +914,44 @@ ipcMain.handle('get-operators', async () => {
 
         const route = apiUrl + 'collaborators';
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+
+            // Garante que o tenantId é uma string válida e não "null" ou "undefined"
+            if (tenantId && tenantId !== 'null' && tenantId !== 'undefined') {
+                headers['x-tenant-id'] = tenantId;
+            }
+
             const request = net.request({
                 method: 'GET',
                 url: route,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: headers
             });
 
             let responseData = '';
 
             request.on('response', (response) => {
+                let body = '';
                 response.on('data', (chunk) => {
-                    responseData += chunk.toString();
+                    body += chunk.toString();
                 });
 
                 response.on('end', () => {
+                    if (response.statusCode !== 200) {
+                        console.error(`Erro na API (${response.statusCode}):`, body);
+                        resolve({
+                            success: false,
+                            message: `Erro ${response.statusCode}: ${body}`,
+                            operators: []
+                        });
+                        return;
+                    }
+
                     try {
-                        const data = JSON.parse(responseData);
+                        const data = JSON.parse(body);
 
                         if (Array.isArray(data)) {
                             const operators = data.map(colab => ({
@@ -915,14 +966,14 @@ ipcMain.handle('get-operators', async () => {
                                 operators: operators
                             });
                         } else {
-                            reject({
+                            resolve({
                                 success: false,
-                                message: 'Erro ao obter a lista de colaboradores',
+                                message: 'Resposta da API não é uma lista válida',
                                 operators: []
                             });
                         }
                     } catch (error) {
-                        reject({
+                        resolve({
                             success: false,
                             message: 'Erro ao processar resposta do servidor',
                             operators: []
@@ -932,7 +983,7 @@ ipcMain.handle('get-operators', async () => {
             });
 
             request.on('error', (error) => {
-                reject({
+                resolve({
                     success: false,
                     message: `Erro de conexão: ${error.message}`,
                     operators: []

@@ -34,14 +34,14 @@
                 //o campo username deve ser formatado como cpf ou cnpj
             function formatarCampoCPFCNPJ() {
                 var campo = document.getElementById('username');
-                var valor = campo.value.replace(/\D/g, ''); // Remove todos os caracteres não numéricos
+                var valor = campo.value.replace(/[^a-zA-Z0-9]/g, ''); // Remove apenas o que não for alfanumérico
 
                 if (valor.length <= 11) {
                     // Formata como CPF
-                    valor = valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    valor = valor.replace(/([a-zA-Z0-9]{3})([a-zA-Z0-9]{3})([a-zA-Z0-9]{3})([a-zA-Z0-9]{2})/, '$1.$2.$3-$4');
                 } else {
                     // Formata como CNPJ
-                    valor = valor.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+                    valor = valor.replace(/([a-zA-Z0-9]{2})([a-zA-Z0-9]{3})([a-zA-Z0-9]{3})([a-zA-Z0-9]{4})([a-zA-Z0-9]{2})/, '$1.$2.$3/$4-$5');
                 }
                 campo.value = valor;
             }
