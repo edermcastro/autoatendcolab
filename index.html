@@ -15,34 +15,91 @@
 </head>
 
 <body>
+    <!-- TELA PRINCIPAL: Lista de fila + Card do chamado atual -->
     <div id="list-view">
-        <h1>Fila</h1>
-        <h3><span id="queue-number"></span></h3>
-        <ul id="item-list">
-            <!-- Itens serão carregados aqui -->
-        </ul>
-        <button id="next-button" disabled>
-            <span id="counter-start"></span>
-            Iniciar atendimento
-        </button>
-        <!-- <button id="sendto-button" disabled>Encaminhar</button> -->
-        <button id="logout-button">Trocar Colaborador</button>
+        <div class="attendance-layout">
+            <!-- Lado esquerdo: tabela da fila -->
+            <div class="queue-panel">
+                <div class="panel-header">
+                    <h2>Fila de Espera</h2>
+                    <span id="queue-count" class="queue-badge">0</span>
+                </div>
+                <div class="queue-table-wrapper">
+                    <table class="queue-table">
+                        <thead>
+                            <tr>
+                                <th>SENHA</th>
+                                <th>CLIENTE</th>
+                                <th>SERVIÇO</th>
+                                <th>TIPO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queue-table-body">
+                            <!-- Linhas da fila -->
+                        </tbody>
+                    </table>
+                    <div id="queue-empty" class="queue-empty" style="display:none;">
+                        <span class="empty-icon">📋</span>
+                        <p>Nenhum cliente aguardando</p>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Lado direito: card do atendimento atual -->
+            <div class="current-card-panel">
+                <div id="current-card" class="current-card" style="display:none;">
+                    <div class="card-header">
+                        <span id="card-ticket" class="card-ticket">---</span>
+                        <span id="card-status-badge" class="card-badge badge-chamado">Chamado</span>
+                    </div>
+                    <div class="card-body">
+                        <p id="card-client-name" class="card-client-name">---</p>
+                        <p id="card-service" class="card-service">---</p>
+                        <p id="card-type" class="card-type"></p>
+                    </div>
+                    <div class="card-actions">
+                        <button id="recall-button" class="btn-recall" disabled>RECHAMAR</button>
+                        <button id="next-button" class="btn-start" disabled>
+                            <span id="counter-start"></span>
+                            INICIAR
+                        </button>
+                    </div>
+                </div>
+                <div id="no-current" class="no-current-card">
+                    <span class="empty-icon">✅</span>
+                    <p>Nenhum atendimento chamado</p>
+                    <small>Clique no botão flutuante para chamar o próximo</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <button id="logout-button" class="btn-logout">Trocar Colaborador</button>
+        </div>
     </div>
 
+    <!-- TELA DE OBSERVAÇÕES (atendimento em andamento) -->
     <div id="obs-view" style="display: none;">
-        <h1>Observações</h1>
-        <p>Atendendo: <span id="selected-item-name"></span></p>
-        <input type="hidden" name="idAtend" id="idAtend">
-        <textarea id="observation-text" rows="10" cols="50" placeholder="Digite suas observações..."></textarea>
-        <button id="save-button">Finalizar atendimento</button>
+        <div class="obs-layout">
+            <div class="obs-header">
+                <h2>Atendimento em Andamento</h2>
+                <div class="obs-client-info">
+                    <span id="selected-item-name" class="obs-client-name"></span>
+                </div>
+            </div>
+            <input type="hidden" name="idAtend" id="idAtend">
+            <textarea id="observation-text" rows="10" placeholder="Digite suas observações sobre o atendimento..."></textarea>
+            <div class="obs-actions">
+                <button id="save-button" class="btn-finish">Finalizar atendimento</button>
+            </div>
+        </div>
     </div>
 
     <div id="encaminhar-view" style="display: none;">
         <h1>Observações</h1>
-        <p>Atendendo: <span id="selected-item-name"></span></p>
+        <p>Atendendo: <span id="enc-selected-item-name"></span></p>
         <textarea id="enc-observation-text" rows="10" cols="50" placeholder="Digite suas observações..."></textarea>
-        <button id="save-button">Salvar</button>
+        <button id="enc-save-button">Salvar</button>
     </div>
 
     <script src="res/js/socket.io.min.js"></script>

@@ -733,6 +733,39 @@ ipcMain.on('iniciar-atendimento', async (event, itemId) => {
     request.end();
 });
 
+// Ouvir clique no botão "Rechamar" - chama novamente o mesmo atendimento
+ipcMain.on('rechamar-atendimento', async (event, itemId) => {
+
+    const token = await getAuthToken();
+    const tenantId = await getTenantId();
+    const colabId = await getSelectedOperatorId();
+    const url = apiUrl + 'attendance/call-next/' + colabId;
+
+    const request = net.request({
+        method: 'POST',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            'x-tenant-id': tenantId
+        }
+    });
+
+    request.on('response', (response) => {
+        response.on('data', (chunk) => {
+            console.log(`Rechamar BODY: ${chunk}`);
+        });
+        response.on('end', () => {
+            console.log('Rechamada concluída.');
+        });
+    });
+    request.on('error', (error) => {
+        console.error(`Erro na rechamada: ${error}`);
+    });
+
+    request.end();
+});
+
 // Ouve quando um atendimento é iniciado e notifica a janela flutuante
 ipcMain.on('atendimento-iniciado', (event, itemId) => {
     if (floatingWin) {

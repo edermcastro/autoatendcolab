@@ -34,7 +34,7 @@
 
 /* Estilos Gerais */
 body {
-    font-family: sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     color: #FFF;
     margin: 0;
     padding: 10px;
@@ -125,15 +125,464 @@ body#floating{
 }
 
 
-/* Janela Principal */
-#list-view, #obs-view {
+/* ================================================
+   NOVO LAYOUT: Tela de Atendimento Redesenhada
+   ================================================ */
+
+#list-view {
+    padding: 16px;
+    background-color: var(--primary-color);
+    height: 96vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+#obs-view {
     padding: 20px;
-    background-color: var(--secondary-color); /* Fundo branco para a janela principal */
+    background-color: var(--secondary-color);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    height: 96vh; /* Ocupa a altura da viewport */
+    height: 96vh;
     box-sizing: border-box;
 }
+
+.attendance-layout {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* PAINEL ESQUERDO: Tabela da fila */
+.queue-panel {
+    flex: 1.6;
+    background-color: rgba(11, 44, 80, 0.4);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.3px;
+}
+
+.queue-badge {
+    background: var(--info-color);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+.queue-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* Tabela da fila */
+.queue-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.queue-table thead th {
+    padding: 10px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    position: sticky;
+    top: 0;
+    background: rgba(11, 44, 80, 0.95);
+    z-index: 1;
+}
+
+.queue-table tbody tr {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.queue-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.queue-table tbody td {
+    padding: 12px 20px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.ticket-cell {
+    font-weight: 700;
+    font-size: 14px !important;
+}
+
+.ticket-normal {
+    color: var(--light-info-color) !important;
+}
+
+.ticket-preferencial {
+    color: var(--warning-color) !important;
+}
+
+.type-normal {
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 11px !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.type-preferencial {
+    color: var(--warning-color) !important;
+    font-size: 11px !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.queue-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: rgba(255, 255, 255, 0.3);
+    gap: 8px;
+}
+
+.queue-empty .empty-icon {
+    font-size: 36px;
+    opacity: 0.5;
+}
+
+.queue-empty p {
+    margin: 0;
+    font-size: 14px;
+}
+
+
+/* PAINEL DIREITO: Card do atendimento atual */
+.current-card-panel {
+    flex: 0.8;
+    display: flex;
+    align-items: stretch;
+}
+
+.current-card {
+    background: linear-gradient(145deg, rgba(11, 44, 80, 0.6), rgba(8, 30, 60, 0.8));
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    animation: cardFadeIn 0.3s ease-out;
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.card-ticket {
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.card-badge {
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-chamado {
+    background: var(--warning-color);
+    color: #fff;
+}
+
+.badge-atendendo {
+    background: var(--success-color);
+    color: #fff;
+    animation: pulse-badge 1.5s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 20px;
+}
+
+.card-client-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.card-service {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.card-type {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 4px 0 0 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.card-type.type-preferencial {
+    color: var(--warning-color);
+}
+
+.card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.btn-recall {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid var(--warning-color);
+    background: transparent;
+    color: var(--warning-color);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    -webkit-app-region: no-drag;
+}
+
+.btn-recall:hover:not(:disabled) {
+    background: var(--warning-color);
+    color: #fff;
+}
+
+.btn-recall:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-start {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: var(--info-color);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    -webkit-app-region: no-drag;
+}
+
+.btn-start:hover:not(:disabled) {
+    background: var(--light-info-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(41, 128, 185, 0.4);
+}
+
+.btn-start:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.no-current-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: rgba(11, 44, 80, 0.2);
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.3);
+    gap: 8px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.no-current-card .empty-icon {
+    font-size: 36px;
+    opacity: 0.4;
+}
+
+.no-current-card p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.no-current-card small {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+
+/* Barra inferior */
+.bottom-bar {
+    padding: 10px 0 0 0;
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.btn-logout {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-app-region: no-drag;
+}
+
+.btn-logout:hover {
+    background: var(--danger-color);
+    color: #fff;
+}
+
+
+/* ================================================
+   TELA DE OBSERVAÇÕES (Atendimento em andamento)
+   ================================================ */
+.obs-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.obs-header {
+    margin-bottom: 20px;
+}
+
+.obs-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.obs-client-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.obs-client-name {
+    font-size: 16px;
+    color: var(--light-info-color);
+    font-weight: 600;
+}
+
+#observation-text {
+    width: calc(100% - 22px) !important;
+    padding: 10px;
+    background-color: var(--secondary-color);
+    border: 1px solid var(--tertiary-color);
+    border-radius: 6px;
+    color: var(--medium-gray);
+    font-size: 14px;
+    flex: 1;
+    resize: vertical;
+    min-height: 120px;
+}
+
+#observation-text:focus-visible {
+    box-shadow: var(--box-shadow-inputs);
+    outline: none;
+}
+
+.obs-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+}
+
+.btn-finish {
+    padding: 12px 28px;
+    background: var(--warning-color);
+    border: none;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-app-region: no-drag;
+}
+
+.btn-finish:hover {
+    background: var(--light-warning-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+}
+
+
+/* ================================================
+   ESTILOS LEGADOS (mantidos para outras telas)
+   ================================================ */
 
 #item-list {
     list-style: none;
@@ -225,15 +674,6 @@ textarea {
     color: var(--medium-gray);
     border-radius: 4px;
     font-size: 16px;
-}
-
-textarea#observation-text{
-    width: calc(100% -20px) !important;
-    padding: 10px;
-    background-color: var(--secondary-color);
-    border: 1px solid var(--tertiary-color);
-    border-radius: 4px;
-    color: var(--medium-gray);
 }
 
 .error-message {
@@ -363,4 +803,23 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+
+/* Scrollbar personalizada */
+.queue-table-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+
+.queue-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.queue-table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.queue-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
 }

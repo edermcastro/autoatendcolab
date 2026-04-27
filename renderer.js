@@ -1,14 +1,24 @@
 const listView = document.getElementById('list-view');
 const observationView = document.getElementById('obs-view');
 const encaminharView = document.getElementById('encaminhar-view');
-const itemList = document.getElementById('item-list');
+
+// Novos elementos do layout redesenhado
+const queueTableBody = document.getElementById('queue-table-body');
+const queueEmpty = document.getElementById('queue-empty');
+const queueCount = document.getElementById('queue-count');
+const currentCard = document.getElementById('current-card');
+const noCurrentCard = document.getElementById('no-current');
+const cardTicket = document.getElementById('card-ticket');
+const cardStatusBadge = document.getElementById('card-status-badge');
+const cardClientName = document.getElementById('card-client-name');
+const cardService = document.getElementById('card-service');
+const cardType = document.getElementById('card-type');
 const nextButton = document.getElementById('next-button');
+const recallButton = document.getElementById('recall-button');
 const logoutButton = document.getElementById('logout-button');
 const observationText = document.getElementById('observation-text');
-const encObservationText = document.getElementById('enc-observation-text');
 const saveButton = document.getElementById('save-button');
 const selectedItemNameSpan = document.getElementById('selected-item-name');
-const queueNumber = document.getElementById('queue-number');
 const idAtend = document.getElementById('idAtend');
 const counterStart = document.getElementById('counter-start');
 
@@ -16,16 +26,22 @@ let currentData = [];
 let selectedItemId = null;
 let selectedItemName = '';
 
+// ===========================
+// FLAG que trava o ID do atendimento chamado.
+// Quando o call-next retorna e define o atendimento atual,
+// este flag impede que atualizações da fila sobrescrevam o selectedItemId.
+// ===========================
+let calledAtendimentoData = null; // Guarda os dados completos do atendimento chamado
+
 window.electronAPI.onLoadData((data) => {
     // Se já estiver em atendimento, ignora atualizações da lista para evitar flickering no botão
     if (localStorage.getItem('atendimentoAtual')) {
         return;
     }
-    nextButton.disabled = true;
     if (!data) {
         return;
     }
-    populateList(data);
+    populateQueueTable(data);
 });
 
 async function initializeSocket() {
@@ -75,20 +91,22 @@ initializeSocket();
 window.electronAPI.selectAtendID((data) => {
     nextButton.disabled = true;
     if (!data) {
-        queueNumber.innerHTML = 'Ninguem aguardando atendimento, fechando a janela em alguns segundos...';
+        showNoCurrentCard('Ninguém aguardando atendimento');
         return;
     }
-    // Reseta a view para a lista sempre que os dados são carregados ao clicar no botão para abrir a janela
-    populateList(data);
-    showListView();
 
-    // Garante que o item selecionado (ID e Nome) seja o que veio da chamada, sobrescrevendo o da lista.
+    // Trava os dados do atendimento chamado para que atualizações da fila
+    // NÃO sobrescrevam quem foi chamado.
+    calledAtendimentoData = data;
     selectedItemId = data._id ?? null;
     selectedItemName = data.clientName ?? '';
 
-    //data.senhaGen
-    queueNumber.innerHTML = data ? `NA VEZ: <u>${data.clientName.toUpperCase()}</u>` : 'Ninguem aguardando atendimento';
-    selectedItemNameSpan.innerHTML = data ? `<u> ${data.clientName.toUpperCase()} </u> <i style="float:right;">[ ${data.ticketNumber} ]</i>` : 'Ninguem aguardando atendimento';
+    // Atualiza a tabela da fila (sem afetar o card atual)
+    // populateQueueTable já NÃO mexe no selectedItemId quando calledAtendimentoData está travado
+    showListView();
+
+    // Mostra o card do atendimento chamado
+    showCurrentCard(data);
 });
 
 window.electronAPI.showObservation(() => {
@@ -96,15 +114,29 @@ window.electronAPI.showObservation(() => {
     showObservationView(); // Muda para a tela de observação
 });
 
-// Função para popular a lista de itens
-function populateList(proximos) {
+// Função para popular a tabela da fila
+function populateQueueTable(proximos) {
     const atendimentoEmAndamentoId = localStorage.getItem('atendimentoAtual');
     const atendimentoEmAndamentoNome = localStorage.getItem('atendimentoAtualNome');
 
     if (atendimentoEmAndamentoId) {
-        itemList.innerHTML = `<li>Atendimento com <strong>${(atendimentoEmAndamentoNome || '').toUpperCase()}</strong> em andamento.</li>`;
-        queueNumber.innerHTML = `EM ATENDIMENTO: <u>${(atendimentoEmAndamentoNome || '').toUpperCase()}</u>`;
+        // Em atendimento: mostra card de atendimento no painel direito
+        queueTableBody.innerHTML = '';
+        queueCount.textContent = '0';
+        queueEmpty.style.display = 'flex';
+        document.querySelector('.queue-table').style.display = 'none';
+        
+        // Mostra card como "Atendendo"
+        currentCard.style.display = 'flex';
+        noCurrentCard.style.display = 'none';
+        cardTicket.textContent = '';
+        cardStatusBadge.textContent = 'Atendendo';
+        cardStatusBadge.className = 'card-badge badge-atendendo';
+        cardClientName.textContent = (atendimentoEmAndamentoNome || '').toUpperCase();
+        cardService.textContent = '';
+        cardType.textContent = '';
         nextButton.disabled = true;
+        recallButton.disabled = true;
         return;
     }
 
@@ -114,36 +146,81 @@ function populateList(proximos) {
         proximos = JSON.parse(datastorage || '[]');
     }
 
-    itemList.innerHTML = '';
+    // Limpa e popula a tabela
+    queueTableBody.innerHTML = '';
 
-    setTimeout(() => {
-        nextButton.disabled = !proximos || proximos.length === 0;
-    }, 1000);
-
-    // Seleciona o primeiro item por padrão (ou o próximo disponível)
-    // Aqui, vamos apenas pegar o primeiro da lista atual
-    const itemToProcess = proximos[0]; // Pega o primeiro item
-    if (itemToProcess) {
-        selectedItemId = itemToProcess._id;
-        selectedItemName = itemToProcess.clientName;
-        const li = document.createElement('li');
-        li.innerHTML = /*${itemToProcess.ticketNumber}: */ `<u>${itemToProcess.clientName.toUpperCase()}</u> - ${itemToProcess.ticketNumber}`;
-        li.dataset.id = itemToProcess._id; // Armazena o ID no elemento
-        li.classList.add('selected'); // Marca como selecionado visualmente (precisa de CSS)
-        itemList.appendChild(li);
+    if (!proximos || proximos.length === 0) {
+        queueEmpty.style.display = 'flex';
+        document.querySelector('.queue-table').style.display = 'none';
+        queueCount.textContent = '0';
     } else {
-        itemList.innerHTML = '<li>Fila vazia!</li>';
-        nextButton.disabled = true;
-        selectedItemId = null;
-        selectedItemName = '';
+        queueEmpty.style.display = 'none';
+        document.querySelector('.queue-table').style.display = 'table';
+        queueCount.textContent = proximos.length;
+
+        proximos.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            const isPreferencial = item.ticketNumber && item.ticketNumber.startsWith('P');
+            
+            tr.innerHTML = `
+                <td class="ticket-cell ${isPreferencial ? 'ticket-preferencial' : 'ticket-normal'}">${item.ticketNumber || '---'}</td>
+                <td>${(item.clientName || '---').toUpperCase()}</td>
+                <td>${item.serviceName || 'Atendimento'}</td>
+                <td class="${isPreferencial ? 'type-preferencial' : 'type-normal'}">${isPreferencial ? 'PREFERENCIAL' : 'NORMAL'}</td>
+            `;
+            
+            queueTableBody.appendChild(tr);
+        });
     }
 
-    // Adiciona os outros itens apenas para visualização (opcional)
-    proximos.slice(1).forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.clientName.toUpperCase()} - ${item.ticketNumber}`;
-        itemList.appendChild(li);
-    });
+    // CORREÇÃO DO BUG: Só atualiza selectedItemId se NÃO houver um atendimento já chamado (travado)
+    if (!calledAtendimentoData) {
+        // Nenhum atendimento foi chamado ainda, pode selecionar o primeiro
+        const firstItem = proximos && proximos[0];
+        if (firstItem) {
+            selectedItemId = firstItem._id;
+            selectedItemName = firstItem.clientName;
+        } else {
+            selectedItemId = null;
+            selectedItemName = '';
+        }
+        // Sem atendimento chamado: não mostra card
+        if (!currentCard.style.display || currentCard.style.display === 'none') {
+            noCurrentCard.style.display = 'flex';
+        }
+    }
+    // Se calledAtendimentoData está definido, NÃO toca no selectedItemId — mantém o que foi chamado.
+}
+
+// Mostra o card do atendimento atual (chamado)
+function showCurrentCard(data) {
+    currentCard.style.display = 'flex';
+    noCurrentCard.style.display = 'none';
+
+    cardTicket.textContent = data.ticketNumber || '---';
+    
+    const statusText = data.status === 'Atendendo' ? 'Atendendo' : 'Chamado';
+    cardStatusBadge.textContent = statusText;
+    cardStatusBadge.className = `card-badge ${data.status === 'Atendendo' ? 'badge-atendendo' : 'badge-chamado'}`;
+    
+    cardClientName.textContent = (data.clientName || '---').toUpperCase();
+    cardService.textContent = (data.serviceName || 'ATENDIMENTO').toUpperCase();
+    
+    const isPreferencial = data.ticketNumber && data.ticketNumber.startsWith('P');
+    cardType.textContent = isPreferencial ? 'PREFERENCIAL' : 'NORMAL';
+    cardType.className = `card-type ${isPreferencial ? 'type-preferencial' : ''}`;
+
+    // Habilita os botões
+    setTimeout(() => {
+        nextButton.disabled = false;
+        recallButton.disabled = false;
+    }, 500);
+}
+
+function showNoCurrentCard(message) {
+    currentCard.style.display = 'none';
+    noCurrentCard.style.display = 'flex';
+    noCurrentCard.querySelector('p').textContent = message || 'Nenhum atendimento chamado';
 }
 
 
@@ -178,23 +255,51 @@ function showObservationView() {
     observationView.style.display = 'block';
 }
 
-// // Evento do botão "Iniciar atendimento"
+// // Evento do botão "Iniciar atendimento" (INICIAR)
 nextButton.addEventListener('click', () => {
-    if (selectedItemId !== null) {
+    // Usa calledAtendimentoData para garantir que estamos iniciando O ATENDIMENTO CORRETO
+    const idToStart = calledAtendimentoData ? calledAtendimentoData._id : selectedItemId;
+    const nameToStart = calledAtendimentoData ? calledAtendimentoData.clientName : selectedItemName;
+
+    if (idToStart !== null) {
         // Salva o estado de atendimento no localStorage
-        localStorage.setItem('atendimentoAtual', selectedItemId);
-        localStorage.setItem('atendimentoAtualNome', selectedItemName);
+        localStorage.setItem('atendimentoAtual', idToStart);
+        localStorage.setItem('atendimentoAtualNome', nameToStart);
+
+        // Atualiza o span da tela de observação
+        selectedItemId = idToStart;
+        selectedItemName = nameToStart;
+        selectedItemNameSpan.innerHTML = `<u> ${(nameToStart || '').toUpperCase()} </u>`;
 
         // Notifica o main process e muda a view
         // IMPORTANTE: iniciaAtendimento deve apenas mudar o status na API, não chamar o próximo.
-        window.electronAPI.atendimentoIniciado(selectedItemId);
-        window.electronAPI.iniciaAtendimento(selectedItemId);
+        window.electronAPI.atendimentoIniciado(idToStart);
+        window.electronAPI.iniciaAtendimento(idToStart);
+
+        // Limpa o travamento — atendimento foi iniciado
+        calledAtendimentoData = null;
+
         showObservationView(); // Muda para a tela de observação
     } else {
-        console.warn("Nenhum item selecionado para 'Próximo'");
+        console.warn("Nenhum item selecionado para 'Iniciar'");
     }
 });
 
+// Evento do botão RECHAMAR
+recallButton.addEventListener('click', () => {
+    if (calledAtendimentoData) {
+        // Re-chama o mesmo atendimento (pode tocar som, exibir no painel, etc.)
+        window.electronAPI.rechamarAtendimento(calledAtendimentoData._id);
+        
+        // Feedback visual
+        recallButton.textContent = 'RECHAMANDO...';
+        recallButton.disabled = true;
+        setTimeout(() => {
+            recallButton.textContent = 'RECHAMAR';
+            recallButton.disabled = false;
+        }, 2000);
+    }
+});
 
 
 logoutButton.addEventListener('click', () => {
@@ -210,6 +315,9 @@ saveButton.addEventListener('click', () => {
         localStorage.removeItem('atendimentoAtual');
         localStorage.removeItem('atendimentoAtualNome');
         window.electronAPI.atendimentoFinalizado();
+
+        // Limpa o travamento
+        calledAtendimentoData = null;
 
         window.electronAPI.saveObservation({ itemId: selectedItemId, observation: observation });
         window.location.reload();
