@@ -1,6 +1,5 @@
 const listView = document.getElementById('list-view');
 const observationView = document.getElementById('obs-view');
-const encaminharView = document.getElementById('encaminhar-view');
 
 // Novos elementos do layout redesenhado
 const queueTableBody = document.getElementById('queue-table-body');
@@ -15,12 +14,19 @@ const cardService = document.getElementById('card-service');
 const cardType = document.getElementById('card-type');
 const nextButton = document.getElementById('next-button');
 const recallButton = document.getElementById('recall-button');
+const forwardButton = document.getElementById('forward-button');
 const logoutButton = document.getElementById('logout-button');
 const observationText = document.getElementById('observation-text');
 const saveButton = document.getElementById('save-button');
 const selectedItemNameSpan = document.getElementById('selected-item-name');
 const idAtend = document.getElementById('idAtend');
 const counterStart = document.getElementById('counter-start');
+
+// Elementos do Modal de Encaminhamento
+const forwardView = document.getElementById('forward-view');
+const operatorsList = document.getElementById('operators-list');
+const closeForward = document.getElementById('close-forward');
+const forwardTicketSpan = document.getElementById('forward-ticket');
 
 let currentData = [];
 let selectedItemId = null;
@@ -137,6 +143,7 @@ function populateQueueTable(proximos) {
         cardType.textContent = '';
         nextButton.disabled = true;
         recallButton.disabled = true;
+        forwardButton.disabled = true;
         return;
     }
 
@@ -214,6 +221,7 @@ function showCurrentCard(data) {
     setTimeout(() => {
         nextButton.disabled = false;
         recallButton.disabled = false;
+        forwardButton.disabled = false;
     }, 500);
 }
 
@@ -240,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
 //mostra a tela de listagem e permite iniciar o atendimento
 function showListView() {
     listView.style.display = 'block';
-    encaminharView.style.display = 'none';
+    forwardView.style.display = 'none';
     observationView.style.display = 'none';
     observationText.value = ''; // Limpa a textarea
 }
@@ -301,6 +309,54 @@ recallButton.addEventListener('click', () => {
     }
 });
 
+// Evento do botão ENCAMINHAR
+forwardButton.addEventListener('click', async () => {
+    if (calledAtendimentoData) {
+        forwardTicketSpan.textContent = calledAtendimentoData.ticketNumber;
+        forwardView.style.display = 'flex';
+        
+        // Carrega operadores
+        operatorsList.innerHTML = '<p style="color: #aaa; padding: 20px; text-align: center;">Carregando atendentes...</p>';
+        const response = await window.electronAPI.getOperators();
+        
+        if (response.success && response.operators) {
+            operatorsList.innerHTML = '';
+            
+            response.operators.forEach(op => {
+                const item = document.createElement('div');
+                item.className = 'operator-item';
+                item.textContent = op.name;
+                item.onclick = () => {
+                    if (confirm(`Encaminhar para ${op.name}?`)) {
+                        window.electronAPI.encaminharAtendimento({
+                            itemId: calledAtendimentoData._id,
+                            collaboratorId: op._id
+                        });
+                        forwardView.style.display = 'none';
+                        
+                        // Limpa o atendimento atual pois foi encaminhado
+                        localStorage.removeItem('atendimentoAtual');
+                        localStorage.removeItem('atendimentoAtualNome');
+                        calledAtendimentoData = null;
+                        selectedItemId = null;
+                        showListView();
+                    }
+                };
+                operatorsList.appendChild(item);
+            });
+            
+            if (response.operators.length === 0) {
+                operatorsList.innerHTML = '<p style="color: #aaa; padding: 20px; text-align: center;">Nenhum outro atendente disponível.</p>';
+            }
+        } else {
+            operatorsList.innerHTML = `<p style="color: #e74c3c; padding: 20px; text-align: center;">${response.message || 'Erro ao carregar atendentes.'}</p>`;
+        }
+    }
+});
+
+closeForward.addEventListener('click', () => {
+    forwardView.style.display = 'none';
+});
 
 logoutButton.addEventListener('click', () => {
     window.electronAPI.logoutApp();

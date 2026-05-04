@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     //rechama o atendimento atual
     rechamarAtendimento: (itemId) => ipcRenderer.send('rechamar-atendimento', itemId),
 
+    //encaminha o atendimento atual
+    getOperators: () => ipcRenderer.invoke('get-operators'),
+    encaminharAtendimento: (data) => ipcRenderer.send('encaminhar-atendimento', data),
+
     //notifica sobre o status do atendimento
     atendimentoIniciado: (itemId) => ipcRenderer.send('atendimento-iniciado', itemId),
     atendimentoFinalizado: () => ipcRenderer.send('atendimento-finalizado'),

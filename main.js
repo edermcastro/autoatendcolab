@@ -739,10 +739,11 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
     const token = await getAuthToken();
     const tenantId = await getTenantId();
     const colabId = await getSelectedOperatorId();
-    const url = apiUrl + 'attendance/call-next/' + colabId;
+    // Rota correta para atualizar o status do item específico e disparar o chamado na TV
+    const url = apiUrl + 'attendance/' + itemId + '/status';
 
     const request = net.request({
-        method: 'POST',
+        method: 'PATCH',
         url: url,
         headers: {
             'Content-Type': 'application/json',
@@ -750,6 +751,12 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
             'x-tenant-id': tenantId
         }
     });
+
+    // Enviar o corpo com o status "Chamado"
+    request.write(JSON.stringify({ 
+        status: 'Chamado',
+        collaboratorId: colabId 
+    }));
 
     request.on('response', (response) => {
         response.on('data', (chunk) => {
@@ -761,6 +768,39 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
     });
     request.on('error', (error) => {
         console.error(`Erro na rechamada: ${error}`);
+    });
+
+    request.end();
+});
+
+// Encaminhar atendimento para outro colaborador
+ipcMain.on('encaminhar-atendimento', async (event, { itemId, collaboratorId }) => {
+    const token = await getAuthToken();
+    const tenantId = await getTenantId();
+    const url = apiUrl + 'attendance/' + itemId + '/forward';
+
+    const request = net.request({
+        method: 'PATCH',
+        url: url,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            'x-tenant-id': tenantId
+        }
+    });
+
+    request.write(JSON.stringify({ collaboratorId }));
+
+    request.on('response', (response) => {
+        response.on('data', (chunk) => {
+            console.log(`Encaminhar BODY: ${chunk}`);
+        });
+        response.on('end', () => {
+            console.log('Encaminhamento concluído.');
+        });
+    });
+    request.on('error', (error) => {
+        console.error(`Erro no encaminhamento: ${error}`);
     });
 
     request.end();

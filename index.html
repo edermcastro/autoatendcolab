@@ -1,56 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self'; 
-        script-src 'self' 'unsafe-inline'; 
-        style-src 'self' 'unsafe-inline'; 
-        connect-src 'self' ws://localhost:3000 http://localhost:3000 ws://autoatends.linco.work wss://autoatends.linco.work;
-    ">
-    <title>Tela de Atendimento</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Operador</title>
     <link rel="stylesheet" href="style.css">
-    <script src="res/js/jquery/jquery.js"></script>
 </head>
 
 <body>
-    <!-- TELA PRINCIPAL: Lista de fila + Card do chamado atual -->
     <div id="list-view">
-        <div class="attendance-layout">
-            <!-- Lado esquerdo: tabela da fila -->
-            <div class="queue-panel">
-                <div class="panel-header">
+        <div class="main-container">
+            <!-- Sidebar/Lista de Espera -->
+            <div class="queue-sidebar">
+                <div class="sidebar-header">
                     <h2>Fila de Espera</h2>
-                    <span id="queue-count" class="queue-badge">0</span>
+                    <span id="queue-count" class="badge">0</span>
                 </div>
-                <div class="queue-table-wrapper">
+                <div class="queue-list-container">
                     <table class="queue-table">
                         <thead>
                             <tr>
-                                <th>SENHA</th>
-                                <th>CLIENTE</th>
-                                <th>SERVIÇO</th>
-                                <th>TIPO</th>
+                                <th>Senha</th>
+                                <th>Cliente</th>
                             </tr>
                         </thead>
                         <tbody id="queue-table-body">
-                            <!-- Linhas da fila -->
+                            <!-- Filas serão inseridas aqui -->
                         </tbody>
                     </table>
-                    <div id="queue-empty" class="queue-empty" style="display:none;">
-                        <span class="empty-icon">📋</span>
-                        <p>Nenhum cliente aguardando</p>
+                    <div id="queue-empty" class="empty-state">
+                        Ninguém na fila
                     </div>
                 </div>
             </div>
 
-            <!-- Lado direito: card do atendimento atual -->
-            <div class="current-card-panel">
-                <div id="current-card" class="current-card" style="display:none;">
+            <!-- Área Principal / Chamada -->
+            <div class="call-area">
+                <div id="no-current" class="no-current-card">
+                    <div class="pulse-icon">🔔</div>
+                    <h2>Aguardando Chamada</h2>
+                    <p>Clique no botão abaixo para chamar o próximo cliente</p>
+                    <button id="call-next-btn" class="btn-primary">CHAMAR PRÓXIMO</button>
+                </div>
+
+                <div id="current-card" class="current-card" style="display: none;">
                     <div class="card-header">
-                        <span id="card-ticket" class="card-ticket">---</span>
-                        <span id="card-status-badge" class="card-badge badge-chamado">Chamado</span>
+                        <span id="card-status-badge" class="status-badge">CHAMADO</span>
+                        <h1 id="card-ticket">---</h1>
                     </div>
                     <div class="card-body">
                         <p id="card-client-name" class="card-client-name">---</p>
@@ -59,16 +56,12 @@
                     </div>
                     <div class="card-actions">
                         <button id="recall-button" class="btn-recall" disabled>RECHAMAR</button>
+                        <button id="forward-button" class="btn-forward" disabled>ENCAMINHAR</button>
                         <button id="next-button" class="btn-start" disabled>
                             <span id="counter-start"></span>
                             INICIAR
                         </button>
                     </div>
-                </div>
-                <div id="no-current" class="no-current-card">
-                    <span class="empty-icon">✅</span>
-                    <p>Nenhum atendimento chamado</p>
-                    <small>Clique no botão flutuante para chamar o próximo</small>
                 </div>
             </div>
         </div>
@@ -95,11 +88,18 @@
         </div>
     </div>
 
-    <div id="encaminhar-view" style="display: none;">
-        <h1>Observações</h1>
-        <p>Atendendo: <span id="enc-selected-item-name"></span></p>
-        <textarea id="enc-observation-text" rows="10" cols="50" placeholder="Digite suas observações..."></textarea>
-        <button id="enc-save-button">Salvar</button>
+    <!-- MODAL DE ENCAMINHAMENTO -->
+    <div id="forward-view" class="modal-view" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Encaminhar</h2>
+                <button id="close-forward" class="btn-close">&times;</button>
+            </div>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 10px;">Selecione para quem encaminhar <span id="forward-ticket" class="highlight"></span>:</p>
+            <div id="operators-list" class="operators-grid">
+                <!-- Operadores serão carregados aqui -->
+            </div>
+        </div>
     </div>
 
     <script src="res/js/socket.io.min.js"></script>
