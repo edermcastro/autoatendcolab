@@ -31,7 +31,7 @@ function getSettings() {
             return JSON.parse(settingsData);
         }
     } catch (error) {
-        console.error('Erro ao ler arquivo de configurações:', error);
+        console.error('Erro ao ler arquivo de configurações: ', error);
     }
     return {}; // Retorna objeto vazio se o arquivo não existir ou houver erro
 }
@@ -914,11 +914,12 @@ ipcMain.on('login-attempt', async (event, credentials) => {
             });
         });
 
-        // Remove máscara do login (CPF/CNPJ) antes de enviar para a API
+        // Remove máscara do login (CPF/CNPJ) e da senha antes de enviar para a API
         const cleanLogin = credentials.login.replace(/[.\-\/]/g, '');
+        const cleanPassword = credentials.password.replace(/[.\-\/]/g, '');
 
         // Envia as credenciais
-        request.write(JSON.stringify({ login: cleanLogin, password: credentials.password }));
+        request.write(JSON.stringify({ login: cleanLogin, password: cleanPassword }));
         request.end();
     } catch (error) {
         event.reply('login-response', {

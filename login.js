@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    const login = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const login = document.getElementById('username').value.replace(/[./-]/g, '');
+    const password = document.getElementById('password').value.replace(/[./-]/g, '');
     
     // Limpa mensagens de erro anteriores
     errorMessage.textContent = '';
