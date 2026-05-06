@@ -111,6 +111,7 @@ async function fetchDataFromAPI() {
 
 async function getFirstData() {
     const token = await getAuthToken();
+    const colab = await getSelectedOperator();
     const colabId = await getSelectedOperatorId();
     const tenantId = await getTenantId();
     const url = apiUrl + 'attendance/next-in-line/' + colabId;
@@ -127,7 +128,8 @@ async function getFirstData() {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token,
-                'x-tenant-id': tenantId
+                'x-tenant-id': tenantId,
+                'x-colab': colab
             }
         });
 
@@ -485,11 +487,11 @@ async function getSelectedOperator() {
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else if (mainWin && !mainWin.isDestroyed()) {
-            mainWin.webContents.executeJavaScript('localStorage.getItem("authToken");')
+            mainWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else if (floatingWin && !floatingWin.isDestroyed()) {
-            floatingWin.webContents.executeJavaScript('localStorage.getItem("authToken");')
+            floatingWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
                 .then(operator => resolve(operator))
                 .catch(() => resolve(null));
         } else {
@@ -501,11 +503,11 @@ async function getSelectedOperator() {
 async function getSelectedOperatorId() {
     return new Promise((resolve, reject) => {
         if (mainWin && !mainWin.isDestroyed()) {
-            mainWin.webContents.executeJavaScript('localStorage.getItem("idOperator");')
+            mainWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
                 .then(operatorId => resolve(operatorId))
                 .catch(() => resolve(null));
         } else if (floatingWin && !floatingWin.isDestroyed()) {
-            floatingWin.webContents.executeJavaScript('localStorage.getItem("idOperator");')
+            floatingWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
                 .then(operatorId => resolve(operatorId))
                 .catch(() => resolve(null));
         } else {
@@ -584,6 +586,7 @@ ipcMain.on('chamar-fila', async () => {
 
     const requestData = async () => {
         const colabId = await getSelectedOperatorId();
+        const colab = await getSelectedOperator();
         const token = await getAuthToken();
         const tenantId = await getTenantId();
         const url = apiUrl + 'attendance/call-next/' + colabId;
@@ -594,7 +597,8 @@ ipcMain.on('chamar-fila', async () => {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token,
-                'x-tenant-id': tenantId
+                'x-tenant-id': tenantId,
+                'x-colab': colab
             }
         });
 
@@ -705,6 +709,8 @@ ipcMain.on('iniciar-atendimento', async (event, itemId) => {
 
     const token = await getAuthToken();
     const tenantId = await getTenantId();
+    const colabId = await getSelectedOperatorId();
+    const colab = await getSelectedOperator();
     const url = apiUrl + 'attendance/' + itemId + '/start';
 
     // envio de uma solicitação POST com o ID do item
@@ -714,7 +720,8 @@ ipcMain.on('iniciar-atendimento', async (event, itemId) => {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token,
-            'x-tenant-id': tenantId
+            'x-tenant-id': tenantId,
+            'x-colab': colab
         }
     });
 
@@ -739,6 +746,7 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
     const token = await getAuthToken();
     const tenantId = await getTenantId();
     const colabId = await getSelectedOperatorId();
+    const colab = await getSelectedOperator();
     // Rota correta para atualizar o status do item específico e disparar o chamado na TV
     const url = apiUrl + 'attendance/' + itemId + '/status';
 
@@ -748,7 +756,8 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token,
-            'x-tenant-id': tenantId
+            'x-tenant-id': tenantId,
+            'x-colab': colab
         }
     });
 
@@ -777,6 +786,8 @@ ipcMain.on('rechamar-atendimento', async (event, itemId) => {
 ipcMain.on('encaminhar-atendimento', async (event, { itemId, collaboratorId }) => {
     const token = await getAuthToken();
     const tenantId = await getTenantId();
+    const colabId = await getSelectedOperatorId();
+    const colab = await getSelectedOperator();
     const url = apiUrl + 'attendance/' + itemId + '/forward';
 
     const request = net.request({
@@ -785,7 +796,8 @@ ipcMain.on('encaminhar-atendimento', async (event, { itemId, collaboratorId }) =
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token,
-            'x-tenant-id': tenantId
+            'x-tenant-id': tenantId,
+            'x-colab': colab
         }
     });
 
@@ -834,6 +846,8 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
 
     const token = await getAuthToken();
     const tenantId = await getTenantId();
+    const colabId = await getSelectedOperatorId();
+    const colab = await getSelectedOperator();
     const url = apiUrl + 'attendance/' + itemId + '/finish';
 
     const fmData = JSON.stringify({
@@ -848,7 +862,8 @@ ipcMain.on('save-observation', async (event, { itemId, observation }) => {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token,
-            'x-tenant-id': tenantId
+            'x-tenant-id': tenantId,
+            'x-colab': colab
         }
     });
 
@@ -1021,6 +1036,12 @@ ipcMain.handle('get-operators', async () => {
             // Garante que o tenantId é uma string válida e não "null" ou "undefined"
             if (tenantId && tenantId !== 'null' && tenantId !== 'undefined') {
                 headers['x-tenant-id'] = tenantId;
+            }
+
+            // Adiciona x-colab se disponível
+            const colab = await getSelectedOperator().catch(() => null);
+            if (colab && colab !== 'null' && colab !== 'undefined') {
+                headers['x-colab'] = colab;
             }
 
             const request = net.request({
