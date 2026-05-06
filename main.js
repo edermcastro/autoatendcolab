@@ -503,11 +503,11 @@ async function getSelectedOperator() {
 async function getSelectedOperatorId() {
     return new Promise((resolve, reject) => {
         if (mainWin && !mainWin.isDestroyed()) {
-            mainWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
+            mainWin.webContents.executeJavaScript('localStorage.getItem("idOperator");')
                 .then(operatorId => resolve(operatorId))
                 .catch(() => resolve(null));
         } else if (floatingWin && !floatingWin.isDestroyed()) {
-            floatingWin.webContents.executeJavaScript('localStorage.getItem("selectedOperator");')
+            floatingWin.webContents.executeJavaScript('localStorage.getItem("idOperator");')
                 .then(operatorId => resolve(operatorId))
                 .catch(() => resolve(null));
         } else {
@@ -1027,7 +1027,7 @@ ipcMain.handle('get-operators', async () => {
 
         const route = apiUrl + 'collaborators';
 
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
             const headers = {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`

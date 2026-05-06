@@ -61,13 +61,17 @@ async function initializeSocket() {
 
     const tenantId = localStorage.getItem('tenantId');
     const token = localStorage.getItem('authToken');
+    const colab = localStorage.getItem('selectedOperator');
 
     //! checa se ja tem o colabId e o tenantId
     if (tenantId && token) {
         // Conexão Socket.io adaptada do Pusher
         const socket = io(host, {
             auth: { token },
-            extraHeaders: { 'x-tenant-id': tenantId }
+            extraHeaders: { 
+                'x-tenant-id': tenantId,
+                'x-colab': colab || 'N/A'
+            }
         });
 
         socket.on('connect', () => {
